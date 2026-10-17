@@ -121,3 +121,9 @@ No compilation, node modules, or backend server required.
 
 * **Developer & Designer**: Festo Manolo ([festomanolo.com](https://festomanolo.com))
 * **Curriculum Alignment**: Tanzania Institute of Education (TIE) & National Examinations Council of Tanzania (NECTA) Form 1 Computer Studies Syllabus.
+
+---
+
+## Study app (v1 slice)
+
+`npm run serve` then open http://localhost:8080. `npm test` runs interpreter tests; `npm run validate` checks content. The original app is in `legacy/`.
