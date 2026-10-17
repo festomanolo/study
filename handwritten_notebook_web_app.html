@@ -1,0 +1,3072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MANOLO — Realistic Handwritten Notebook App</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Kalam & Patrick Hand for authentic ballpoint handwriting -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Patrick+Hand&family=Caveat:wght@500;700&family=Permanent+Marker&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --line-h: 28px;
+      --header-h: 72px;
+      --paper-bg: #f1eee6;
+      --ink-blue: #1b387b;
+      --ink-black: #1e232a;
+      --margin-red: rgba(214, 92, 110, 0.72);
+      --rule-grey: rgba(132, 144, 160, 0.52);
+      --lighting-opacity: 0.88;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #111317;
+      background-image: 
+        radial-gradient(circle at 50% 25%, #232730 0%, #0d0f12 80%);
+      font-family: 'Inter', sans-serif;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+
+    /* 3D Perspective Stage for Notebook */
+    .notebook-stage {
+      perspective: 2400px;
+      transform-style: preserve-3d;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 28px 16px 120px 16px;
+      min-height: 100vh;
+    }
+
+    /* Outer Book Frame (includes sliver of left adjacent page + main right page) */
+    .notebook-spread {
+      position: relative;
+      width: 740px;
+      height: 1068px;
+      display: flex;
+      border-radius: 6px 10px 10px 6px;
+      box-shadow: 
+        0 30px 60px -12px rgba(0, 0, 0, 0.85),
+        0 0 1px 1px rgba(255, 255, 255, 0.08);
+      transform-origin: top center;
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+      user-select: none;
+    }
+
+    /* Left adjacent page glimpse (just like the reference photo!) */
+    .left-page-glimpse {
+      width: 44px;
+      height: 100%;
+      background-color: #e4e0d6;
+      border-radius: 6px 0 0 6px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+      background-image:
+        linear-gradient(to bottom, transparent 0px, transparent 67px, var(--margin-red) 67px, var(--margin-red) 69px, transparent 69px, transparent 71px, var(--margin-red) 71px, var(--margin-red) 72px),
+        repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, rgba(120, 130, 145, 0.48) 27px, rgba(120, 130, 145, 0.48) 28px);
+      background-position: 0 var(--header-h);
+      box-shadow: inset -14px 0 22px rgba(0, 0, 0, 0.32);
+    }
+
+    /* Header red line on the left glimpse */
+    .left-page-glimpse::before {
+      content: "";
+      position: absolute;
+      top: 67px;
+      left: 0;
+      right: 0;
+      height: 5px;
+      border-top: 1.5px solid var(--margin-red);
+      border-bottom: 1.5px solid var(--margin-red);
+    }
+
+    /* Right main notebook container */
+    .pages-viewport {
+      position: relative;
+      width: 696px;
+      height: 100%;
+      perspective: 2200px;
+      transform-style: preserve-3d;
+      background-color: #dedad0;
+      border-radius: 0 8px 8px 0;
+      /* Stacked paper edges on the right side */
+      box-shadow: 
+        3px 0 0 #d8d4ca,
+        4px 0 0 #aba69c,
+        6px 0 0 #ebe7de,
+        7px 0 0 #9e9990;
+    }
+
+    /* Individual Flippable Page */
+    .notebook-page {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--paper-bg);
+      border-radius: 0 6px 6px 0;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      overflow: hidden;
+      transition: transform 0.72s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.4s ease;
+      will-change: transform;
+
+      /* Precisely locked 28px ruled lines + double left vertical red margin */
+      background-image:
+        /* Left double red vertical margin lines at 54px and 58px */
+        linear-gradient(90deg, 
+          transparent 0px, 
+          transparent 54px, 
+          var(--margin-red) 54px, 
+          var(--margin-red) 55.5px, 
+          transparent 55.5px, 
+          transparent 58.5px, 
+          var(--margin-red) 58.5px, 
+          var(--margin-red) 60px, 
+          transparent 60px
+        ),
+        /* Repeating 28px horizontal ruled lines */
+        repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 27px,
+          var(--rule-grey) 27px,
+          var(--rule-grey) 28px
+        );
+      background-size: 100% 100%, 100% var(--line-h);
+      background-position: 0 0, 0 var(--header-h);
+    }
+
+    /* Page Flip States */
+    .notebook-page.page-active {
+      transform: rotateY(0deg);
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    .notebook-page.page-flipped-left {
+      transform: rotateY(-172deg);
+      z-index: 30;
+      pointer-events: none;
+      box-shadow: 25px 0 50px rgba(0, 0, 0, 0.45);
+    }
+
+    .notebook-page.page-stacked-right {
+      transform: rotateY(0deg);
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Interactive corner curl hint on hover */
+    .notebook-page.page-active::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, transparent 48%, rgba(0,0,0,0.08) 50%, #fbf9f4 53%, #dcd7cc 100%);
+      border-radius: 6px 0 0 0;
+      box-shadow: -3px -3px 8px rgba(0,0,0,0.12);
+      opacity: 0.65;
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+    .notebook-page.page-active:hover::after {
+      width: 52px;
+      height: 52px;
+      opacity: 0.95;
+    }
+
+    /* Top Header Area (above 72px double red line) */
+    .page-header {
+      position: relative;
+      height: var(--header-h);
+      width: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 6px;
+    }
+
+    /* Double red horizontal line at bottom of header */
+    .page-header::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      border-top: 1.6px solid var(--margin-red);
+      border-bottom: 1.6px solid var(--margin-red);
+      pointer-events: none;
+    }
+
+    /* Top-right "MANOLO" Brand Stamp */
+    .vidyalekhan-stamp {
+      position: absolute;
+      top: 12px;
+      right: 26px;
+      color: #c64b65;
+      opacity: 0.85;
+      mix-blend-mode: multiply;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      pointer-events: none;
+    }
+
+    /* Bottom Footer Watermark ("festomanolo.com") */
+    .page-footer-watermark {
+      position: absolute;
+      bottom: 8px;
+      left: 66px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 35;
+      mix-blend-mode: multiply;
+      color: #b84a62;
+      opacity: 0.68;
+      font-family: 'Inter', monospace, sans-serif;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 1.6px;
+      text-transform: lowercase;
+    }
+
+    .page-footer-watermark::before {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(214, 92, 110, 0.45), rgba(214, 92, 110, 0.1));
+      margin-right: 10px;
+    }
+
+    /* Main Page Title in Header */
+    .page-main-title {
+      font-family: 'Patrick Hand', 'Kalam', cursive;
+      font-size: 23.5px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: var(--ink-blue);
+      mix-blend-mode: multiply;
+      position: relative;
+      line-height: 1.1;
+      padding: 0 8px 1px 8px;
+      transform: rotate(-0.25deg);
+    }
+
+    /* Hand-drawn double ink underline under the page title */
+    .page-main-title::before,
+    .page-main-title::after {
+      content: "";
+      position: absolute;
+      left: -4px;
+      right: -4px;
+      height: 1.8px;
+      background-color: var(--ink-black);
+      border-radius: 2px;
+      opacity: 0.88;
+      filter: url(#ink-sketch);
+    }
+    .page-main-title::before {
+      bottom: -3px;
+    }
+    .page-main-title::after {
+      bottom: -7px;
+      left: 2px;
+      right: -2px;
+    }
+
+    /* Notebook Body Content — Strictly Locked to 28px Line Height! */
+    .page-body {
+      position: relative;
+      width: 100%;
+      height: calc(100% - var(--header-h));
+      padding-left: 66px;
+      padding-right: 18px;
+      font-family: 'Patrick Hand', 'Kalam', cursive;
+      font-size: 18.2px;
+      line-height: var(--line-h);
+      color: var(--ink-blue);
+      mix-blend-mode: multiply;
+      letter-spacing: 0.25px;
+      word-spacing: 1.5px;
+    }
+
+    /* Shift text baseline so characters sit naturally right ON the ruled line */
+    .ink-line,
+    .section-block p,
+    .section-heading {
+      line-height: var(--line-h);
+      margin: 0;
+      padding: 0;
+      position: relative;
+      top: 3px; /* Locks baseline directly onto the 28px line */
+      transform: translateY(var(--jy, 0px)) rotate(var(--jr, 0deg));
+    }
+
+    /* Dark Black/Charcoal Ink for Headings & Numbers */
+    .ink-black {
+      color: var(--ink-black);
+      font-weight: 700;
+      letter-spacing: 0.35px;
+    }
+
+    /* Hand-drawn underline for headings and "Example :" */
+    .ink-underline {
+      position: relative;
+      display: inline-block;
+    }
+    .ink-underline::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: -2px;
+      bottom: 2px;
+      height: 1.7px;
+      background-color: var(--ink-black);
+      border-radius: 2px;
+      filter: url(#ink-sketch);
+      opacity: 0.9;
+    }
+
+    /* Margin Number (e.g., "7)" inside the red margin column) */
+    .margin-num {
+      position: absolute;
+      left: -38px;
+      top: 0;
+      color: var(--ink-black);
+      font-weight: 700;
+    }
+
+    /* Hardware Section Layout: Text on left, Hand-Drawn Diagram on right */
+    .hw-section {
+      position: relative;
+      width: 100%;
+    }
+
+    /* Floating right-side diagram container that doesn't break the 28px vertical line rhythm */
+    .diagram-float {
+      position: absolute;
+      right: 4px;
+      top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+      opacity: 0.92;
+      filter: url(#ink-sketch);
+    }
+
+    /* Editable Mode Highlight */
+    .editing-active .editable-region {
+      outline: none;
+      cursor: text;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    .editing-active .editable-region:hover {
+      background-color: rgba(27, 56, 123, 0.04);
+    }
+    .editing-active .editable-region:focus {
+      background-color: rgba(27, 56, 123, 0.07);
+      box-shadow: -3px 0 0 rgba(27, 56, 123, 0.45);
+    }
+
+    /* Realistic Camera Lighting, Spine Curve & Paper Grain Overlay */
+    .lighting-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      opacity: var(--lighting-opacity);
+      background:
+        /* Left book spine shadow gutter + subtle curved page highlight */
+        linear-gradient(
+          90deg,
+          rgba(15, 12, 8, 0.42) 0%,
+          rgba(25, 20, 14, 0.18) 2.2%,
+          rgba(40, 35, 25, 0.05) 5.5%,
+          rgba(255, 253, 248, 0.22) 13%,
+          rgba(255, 253, 248, 0.05) 35%,
+          rgba(20, 18, 15, 0.04) 85%,
+          rgba(15, 12, 10, 0.18) 98.5%,
+          rgba(10, 8, 6, 0.32) 100%
+        ),
+        /* Smartphone overhead camera vignette lighting */
+        radial-gradient(
+          ellipse at 54% 42%,
+          rgba(255, 252, 242, 0.16) 0%,
+          rgba(240, 234, 220, 0.02) 52%,
+          rgba(28, 24, 18, 0.22) 100%
+        );
+    }
+
+    /* Subtle Paper Fiber Noise Overlay */
+    .paper-grain {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 39;
+      opacity: 0.24;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.18'/%3E%3C/svg%3E");
+    }
+
+    /* Ink SVG Styling */
+    .ink-svg {
+      stroke: var(--ink-blue);
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .ink-svg text {
+      fill: var(--ink-blue);
+      stroke: none;
+      font-family: 'Patrick Hand', 'Kalam', cursive;
+      font-weight: 700;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #111317;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2e3440;
+      border-radius: 4px;
+    }
+
+    /* =========================================================
+       1. BILINGUAL "PENCIL MARGIN" (SWAHILI <-> ENGLISH BRIDGE)
+       ========================================================= */
+    .translatable-term {
+      cursor: pointer;
+      position: relative;
+      display: inline;
+      border-bottom: 2px dashed rgba(100, 116, 139, 0.7);
+      transition: background-color 0.2s, color 0.2s;
+      border-radius: 2px;
+    }
+    .translatable-term:hover {
+      background-color: rgba(254, 240, 138, 0.55);
+      color: #0d1e42;
+    }
+    .translatable-term::after {
+      content: " ✏️";
+      font-size: 11px;
+      opacity: 0.55;
+      vertical-align: super;
+      margin-left: 2px;
+      pointer-events: none;
+    }
+    .translatable-term:hover::after {
+      opacity: 1;
+    }
+
+    /* Pencil Annotation Popup Card (Margin Sticky) */
+    .pencil-annot-card {
+      position: absolute;
+      z-index: 60;
+      width: 290px;
+      background: #fffdf5;
+      border: 1px solid #d9d2c2;
+      border-radius: 4px;
+      box-shadow: 
+        0 15px 30px -5px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(0, 0, 0, 0.08);
+      padding: 14px 16px;
+      font-family: 'Caveat', cursive;
+      color: #1e293b;
+      transform: rotate(-0.5deg);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: auto;
+    }
+    .pencil-annot-card::before {
+      content: "";
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 70px;
+      height: 16px;
+      background: rgba(245, 218, 140, 0.75);
+      border: 1px dashed rgba(180, 150, 70, 0.5);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* "Fafanua kwa Kiswahili" Sticky Note Overlays */
+    .swahili-sticky-note {
+      position: relative;
+      background: #fef08a;
+      background-image: linear-gradient(180deg, #fef9c3 0%, #fef08a 100%);
+      border-radius: 2px 2px 10px 2px;
+      box-shadow: 
+        2px 6px 14px rgba(0, 0, 0, 0.16),
+        -1px 2px 4px rgba(0, 0, 0, 0.06);
+      padding: 10px 14px;
+      margin: 6px 0 10px 0;
+      font-family: 'Caveat', 'Patrick Hand', cursive;
+      font-size: 19px;
+      line-height: 24px;
+      color: #1e3a8a;
+      transform: rotate(-0.6deg);
+      border-left: 3.5px solid #eab308;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: none;
+      z-index: 30;
+    }
+    .swahili-sticky-note.visible {
+      display: block;
+      animation: stickyPop 0.28s ease-out;
+    }
+    @keyframes stickyPop {
+      from { opacity: 0; transform: translateY(-6px) scale(0.98) rotate(-1.5deg); }
+      to { opacity: 1; transform: translateY(0) scale(1) rotate(-0.6deg); }
+    }
+
+    /* =========================================================
+       2. ANIMATED INK DATA FLOW SIMULATOR & MOTHERBOARD HOTSPOTS
+       ========================================================= */
+    .data-flow-path {
+      stroke: #dc2626;
+      stroke-width: 2.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 6 4;
+      animation: flowDash 0.8s linear infinite;
+      filter: drop-shadow(0 0 3px rgba(220, 38, 38, 0.6));
+    }
+    @keyframes flowDash {
+      from { stroke-dashoffset: 20; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    .pulse-component {
+      animation: pulseRedGlow 1.2s ease-in-out infinite;
+    }
+    @keyframes pulseRedGlow {
+      0%, 100% { filter: drop-shadow(0 0 2px rgba(220, 38, 38, 0.4)); }
+      50% { filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.85)); stroke: #ef4444; }
+    }
+
+    .flow-hud-badge {
+      position: absolute;
+      top: 14px;
+      left: 64px;
+      z-index: 45;
+      background: rgba(17, 24, 39, 0.94);
+      border: 1.5px solid #ef4444;
+      color: #fee2e2;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5), 0 0 15px rgba(239, 68, 68, 0.4);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Motherboard Hotspots */
+    .hotspot-marker {
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .hotspot-marker circle.pulse {
+      animation: ringScale 1.6s ease-out infinite;
+      transform-origin: center;
+    }
+    @keyframes ringScale {
+      0% { r: 5px; opacity: 1; stroke-width: 2.2; }
+      100% { r: 16px; opacity: 0; stroke-width: 0.6; }
+    }
+
+    /* Motherboard Unfolded Cutout Inspector Card */
+    .cutout-inspector-card {
+      position: absolute;
+      z-index: 55;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(0.4deg);
+      width: 320px;
+      background: #fffdf8;
+      border: 1.5px dashed #a8a29e;
+      border-radius: 6px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6), 0 0 0 1000px rgba(0,0,0,0.4);
+      padding: 16px;
+      font-family: 'Patrick Hand', 'Kalam', cursive;
+      color: #1e293b;
+      animation: unfoldModal 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes unfoldModal {
+      from { transform: translate(-50%, -46%) scale(0.9) rotate(-2deg); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1) rotate(0.4deg); opacity: 1; }
+    }
+
+    /* =========================================================
+       3. ACTIVE RECALL / LABEL-SCRAMBLE MODE
+       ========================================================= */
+    .recall-dropzone {
+      cursor: pointer;
+      stroke: #dc2626;
+      stroke-width: 1.8;
+      stroke-dasharray: 4 3;
+      fill: rgba(254, 226, 226, 0.45);
+      rx: 3px;
+      transition: all 0.2s ease;
+    }
+    .recall-dropzone.hover-target {
+      fill: rgba(239, 68, 68, 0.25);
+      stroke-width: 2.5;
+    }
+    .recall-dropzone.solved {
+      stroke: #16a34a;
+      fill: rgba(220, 252, 231, 0.7);
+    }
+
+    .scramble-tray {
+      position: fixed;
+      bottom: 74px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: rgba(24, 24, 27, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(245, 158, 11, 0.6);
+      border-radius: 16px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+    }
+    .paper-slip {
+      cursor: grab;
+      user-select: none;
+      background: #fbf9f4;
+      border: 1px solid #d4cebe;
+      border-radius: 4px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.8);
+      padding: 4px 12px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 17px;
+      font-weight: 700;
+      color: #1b387b;
+      transform: rotate(var(--rot, -1deg));
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .paper-slip:hover {
+      transform: scale(1.08) rotate(1deg);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+    }
+    .paper-slip.placed {
+      opacity: 0.35;
+      pointer-events: none;
+      text-decoration: line-through;
+    }
+
+    /* =========================================================
+       4. NECTA COMPETENCY CHECKPOINTS & RED-PEN GRADING
+       ========================================================= */
+    .necta-stamp-box {
+      border: 2px solid #b91c1c;
+      border-radius: 4px;
+      padding: 5px 10px;
+      background: rgba(254, 242, 242, 0.6);
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #991b1b;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .red-pen-mark {
+      stroke: #dc2626;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      filter: drop-shadow(0 1px 1px rgba(185, 28, 28, 0.35));
+    }
+    .red-pen-anim {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: drawStroke 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    }
+    @keyframes drawStroke {
+      to { stroke-dashoffset: 0; }
+    }
+    .teacher-red-comment {
+      font-family: 'Permanent Marker', 'Caveat', cursive;
+      color: #dc2626;
+      font-size: 16px;
+      line-height: 1.2;
+      transform: rotate(-1deg);
+      display: inline-block;
+    }
+    .red-score-circle {
+      position: absolute;
+      top: 8px;
+      right: 20px;
+      width: 98px;
+      height: 98px;
+      border: 3.5px solid #dc2626;
+      border-radius: 50% 46% 52% 48%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #dc2626;
+      font-family: 'Permanent Marker', cursive;
+      transform: rotate(-6deg);
+      box-shadow: inset 0 0 10px rgba(220, 38, 38, 0.15);
+      pointer-events: none;
+      z-index: 35;
+      background: rgba(254, 242, 242, 0.4);
+    }
+
+    /* =========================================================
+       5. MWALIMU VOICE NOTE & SYNCED YELLOW HIGHLIGHTER
+       ========================================================= */
+    .paperclip-hanger {
+      position: absolute;
+      top: -12px;
+      left: 24px;
+      z-index: 45;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .paperclip-hanger:hover {
+      transform: translateY(-2px);
+    }
+    .mwalimu-audio-card {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      z-index: 44;
+      width: 250px;
+      background: #fffef7;
+      border: 1px solid #e7dfcc;
+      border-radius: 0 4px 8px 8px;
+      box-shadow: 0 12px 28px -6px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06);
+      padding: 10px 12px;
+      font-family: 'Inter', sans-serif;
+      transform-origin: top left;
+      transform: rotate(-0.5deg);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .synced-highlighter {
+      position: absolute;
+      background: rgba(253, 224, 71, 0.45);
+      mix-blend-mode: multiply;
+      border-radius: 3px;
+      box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 25;
+      border-top: 1px dashed rgba(234, 179, 8, 0.4);
+      border-bottom: 1.5px solid rgba(234, 179, 8, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Global SVG Filters for Ballpoint Pen Sketch Realism -->
+  <svg width="0" height="0" class="absolute pointer-events-none">
+    <defs>
+      <!-- Subtle wobble for hand-drawn diagrams & underlines -->
+      <filter id="ink-sketch" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" seed="4" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.45" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- Top Ambient Info Bar -->
+  <header class="w-full max-w-4xl mx-auto pt-4 px-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
+    <div class="flex items-center gap-2.5">
+      <span class="inline-block w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></span>
+      <span class="font-medium text-zinc-200 tracking-wide">Digital Studygram Notebook</span>
+      <span class="hidden sm:inline text-zinc-500">•</span>
+      <span class="hidden sm:inline text-zinc-400">28px Ruled Grid + Ballpoint SVG Physics</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="gesture-hint" class="text-zinc-400">Swipe page or use ← → keys to flip</span>
+      <button id="zoom-toggle-btn" class="px-2.5 py-1 rounded-md bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition cursor-pointer">
+        Fit Width (100%)
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3D Notebook Stage -->
+  <main class="notebook-stage" id="notebook-stage">
+    <div class="notebook-spread" id="notebook-spread">
+      
+      <!-- Left Page Glimpse & Spine Gutter (matches left edge of photo) -->
+      <div class="left-page-glimpse">
+        <!-- Partial red stamp on top-left page -->
+        <div class="absolute top-3 left-1 text-[#c64b65] opacity-75 text-[11px] font-bold">
+          ✿
+        </div>
+      </div>
+
+      <!-- Right Pages Viewport -->
+      <div class="pages-viewport" id="pages-viewport">
+
+        <!-- =========================================================
+             PAGE 1: COMPUTER BASICS (PART-3) - EXACT REPLICA OF PHOTO
+             ========================================================= -->
+        <article class="notebook-page page-active" data-page-index="0">
+          <div class="paper-grain"></div>
+          <div class="lighting-overlay"></div>
+
+          <!-- Metallic Paperclip with Mwalimu Voice Note (0 KB Video Bandwidth) -->
+          <div class="paperclip-hanger" data-page-audio="0" title="Bonyeza kusikiliza Sauti ya Mwalimu (Audio Note)">
+            <svg class="w-8 h-12" viewBox="0 0 32 48" fill="none">
+              <path d="M10 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#8a929e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+                    filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))"/>
+              <path d="M11 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#f1f5f9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- Mwalimu Audio Note Dropdown -->
+          <div class="mwalimu-audio-card hidden" id="audio-card-0">
+            <div class="flex items-center justify-between border-b border-amber-900/10 pb-1 mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">🎙️</span>
+                <span class="font-bold text-[11.5px] text-zinc-800">Mwalimu Voice Note</span>
+              </div>
+              <span class="text-[9px] bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded font-mono font-semibold">0 KB Bando</span>
+            </div>
+            <p class="text-[10.5px] text-zinc-600 leading-tight mb-2 font-sans">
+              Maelezo ya Kiswahili na analojia za TIE. Mstari wa njano unakwenda sambamba na sauti.
+            </p>
+            <div class="flex items-center gap-2">
+              <button class="play-mwalimu-btn px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-zinc-900 text-xs font-bold rounded shadow-sm transition flex items-center gap-1 cursor-pointer" data-page="0">
+                <span class="play-icon">▶</span> <span class="play-text">Sikiliza</span>
+              </button>
+              <div class="flex-1 bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                <div class="audio-progress-bar h-full bg-amber-500 w-0 transition-all duration-200"></div>
+              </div>
+              <span class="audio-time text-[9.5px] font-mono text-zinc-500">0:00</span>
+            </div>
+          </div>
+
+          <!-- Animated Red Ink Data Flow Overlay (Fetch-Decode-Execute) -->
+          <svg id="dataflow-svg-overlay" class="absolute inset-0 w-full h-full pointer-events-none z-30 hidden" viewBox="0 0 696 1068">
+            <defs>
+              <marker id="red-arrowhead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626" />
+              </marker>
+            </defs>
+            <!-- Flow 1: RAM to CPU -->
+            <path id="flow-ram-to-cpu" class="data-flow-path" d="M 570 480 C 510 420, 480 310, 560 210" marker-end="url(#red-arrowhead)"/>
+            <!-- Flow 2: CPU internal cycle to Motherboard -->
+            <path id="flow-cpu-to-bus" class="data-flow-path" d="M 560 230 C 620 280, 610 320, 560 360" marker-end="url(#red-arrowhead)"/>
+          </svg>
+          <div id="dataflow-hud-badge" class="flow-hud-badge hidden">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+            <span id="dataflow-hud-text">Data Flow: Fetching instruction from RAM...</span>
+          </div>
+
+          <!-- Top Header -->
+          <div class="page-header">
+            <h1 class="page-main-title editable-region" spellcheck="false">
+              Computer Basics &nbsp;(Part - 3)
+            </h1>
+
+            <!-- MANOLO Brand Stamp -->
+            <div class="vidyalekhan-stamp">
+              <div class="flex items-center gap-1">
+                <span class="font-serif font-bold text-[14.5px] tracking-[0.14em] leading-none">MANOLO</span>
+                <svg class="w-4 h-4 stroke-[#c64b65] fill-none" viewBox="0 0 24 24" stroke-width="1.8">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                </svg>
+              </div>
+              <div class="text-[8.5px] font-sans tracking-wider leading-[11px] mt-0.5 text-[#c64b65]/90">
+                <div>DATE <span class="inline-block w-14 border-b border-[#c64b65]/60"></span></div>
+                <div>PAGE <span class="inline-block w-14 border-b border-[#c64b65]/60 text-center font-mono">01</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ruled Body Content (35 lines locked at 28px each) -->
+          <div class="page-body editable-region" spellcheck="false">
+            
+            <!-- Intro Block (Lines 1 to 4) -->
+            <div class="hw-section" data-section-id="intro-hw">
+              <div class="swahili-sticky-note" data-sticky-id="intro-hw">
+                <strong>📌 Fafanua:</strong> Ndani ya kasha la kompyuta (System Unit), kuna vifaa vikuu vinavyofanya kazi kama viungo vya mwili wa binadamu. Hebu tuvijue kimoja kimoja kwa mifano halisi ya maisha yetu.
+              </div>
+              <p class="ink-line">
+                <span class="margin-num">7)</span>
+                <span class="ink-black ink-underline">Important Computer Hardware Components :</span>
+              </p>
+              <p class="ink-line pl-5">There are some main hardware components that work</p>
+              <p class="ink-line">together to make the computer run smoothly. Let's learn</p>
+              <p class="ink-line">about each component.</p>
+            </div>
+
+            <!-- 1. CPU (Lines 5 to 11) -->
+            <div class="hw-section" data-section-id="cpu">
+              <div class="swahili-sticky-note" data-sticky-id="cpu">
+                <strong>🧠 Ubongo wa Kompyuta:</strong> Kama vile rubani wa ndege au dereva mkuu wa treni anavyoamuru safari nzima, CPU ndiyo inafanya mahesabu yote na kutoa amri kwa kila kifaa. <br/>
+                <em>Ushauri wa NECTA:</em> Taja kuwa inafanya hatua 3: Fetch (kuchota amri), Decode (kuchambua) na Execute (kutekeleza).
+              </div>
+
+              <!-- Hand-Drawn CPU Diagram on the right -->
+              <div class="diagram-float cursor-pointer hover:scale-105 transition-transform" style="top: 14px; right: 10px;" title="Bofya kuona mzunguko wa data (Fetch-Decode-Execute)!" onclick="window.runDataFlowSimulator()">
+                <svg id="cpu-diagram-svg" class="ink-svg w-[124px] h-[124px]" viewBox="0 0 130 130">
+                  <!-- Top Pins with small crossbars -->
+                  <g stroke-width="1.8">
+                    <path d="M35 8v16 M32 13h6 M44 8v16 M41 13h6 M53 8v16 M50 13h6 M62 8v16 M59 13h6 M71 8v16 M68 13h6 M80 8v16 M77 13h6 M89 8v16 M86 13h6 M96 8v16 M93 13h6"/>
+                    <!-- Bottom Pins -->
+                    <path d="M35 106v16 M32 116h6 M44 106v16 M41 116h6 M53 106v16 M50 116h6 M62 106v16 M59 116h6 M71 106v16 M68 116h6 M80 106v16 M77 116h6 M89 106v16 M86 116h6 M96 106v16 M93 116h6"/>
+                    <!-- Left Pins -->
+                    <path d="M8 35h16 M13 32v6 M8 45h16 M13 42v6 M8 55h16 M13 52v6 M8 65h16 M13 62v6 M8 75h16 M13 72v6 M8 85h16 M13 82v6 M8 95h16 M13 92v6"/>
+                    <!-- Right Pins -->
+                    <path d="M106 35h16 M116 32v6 M106 45h16 M116 42v6 M106 55h16 M116 52v6 M106 65h16 M116 62v6 M106 75h16 M116 72v6 M106 85h16 M116 82v6 M106 95h16 M116 92v6"/>
+                  </g>
+                  <!-- Outer & Inner Square Body -->
+                  <rect class="cpu-core-box" x="24" y="24" width="82" height="82" rx="2" stroke-width="2.3"/>
+                  <rect x="28" y="28" width="74" height="74" rx="1.5" stroke-width="1.5"/>
+                  <text class="diagram-text-label" data-label-id="CPU" x="65" y="71" text-anchor="middle" font-size="20" letter-spacing="1">CPU</text>
+                  <!-- Active Recall Dropzone -->
+                  <rect class="recall-dropzone hidden" data-target-id="CPU" x="42" y="52" width="46" height="26" rx="3" />
+                </svg>
+              </div>
+
+              <p class="ink-line">
+                <span class="ink-black">1. </span>
+                <span class="ink-black ink-underline translatable-term" data-term="cpu">CPU (Central Processing Unit)</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">CPU is called the <span class="translatable-term" data-term="brain">brain of the computer</span>. It</p>
+              <p class="ink-line pl-5">processes data, performs calculations and</p>
+              <p class="ink-line pl-5">controls all the activities of the computer.</p>
+              <p class="ink-line pl-5">It fetches instructions from memory, processes</p>
+              <p class="ink-line pl-5">them and gives the result.</p>
+              <p class="ink-line pl-5">
+                <span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> Intel Core i3, i5, i7, AMD Ryzen.
+              </p>
+            </div>
+
+            <!-- 2. Motherboard (Lines 12 to 17) -->
+            <div class="hw-section" data-section-id="motherboard">
+              <div class="swahili-sticky-note" data-sticky-id="motherboard">
+                <strong>🛣️ Ubao Mama (Soko Kuu / Barabara Kuu):</strong> Ni sawa na Barabara Kuu inayounganisha mitaa yote. Vifaa vyote kama CPU, RAM na Diski vinachomekwa hapa ili viwasiliane bila kikwazo.<br/>
+                <em>Gusa vitone vyekundu (hotspots) kwenye mchoro kuchunguza vinavyochomekwa!</em>
+              </div>
+
+              <!-- Hand-Drawn Motherboard Diagram on the right with Interactive Hotspots -->
+              <div class="diagram-float" style="top: 8px; right: 12px; pointer-events: auto;">
+                <svg id="motherboard-svg" class="ink-svg w-[118px] h-[142px]" viewBox="0 0 120 145">
+                  <!-- Main PCB Board Outline -->
+                  <rect x="12" y="6" width="98" height="132" rx="2" stroke-width="2.2"/>
+                  <rect x="15" y="9" width="92" height="126" rx="1" stroke-width="1.1"/>
+                  <!-- Rear I/O Port Blocks on Left Edge -->
+                  <rect x="12" y="18" width="12" height="12" stroke-width="1.6"/>
+                  <rect x="12" y="33" width="14" height="18" stroke-width="1.6"/>
+                  <rect x="12" y="54" width="11" height="10" stroke-width="1.6"/>
+                  <rect x="12" y="68" width="13" height="14" stroke-width="1.6"/>
+                  <!-- Top Screw Holes / VRM Cubes -->
+                  <circle cx="24" cy="14" r="2.5" stroke-width="1.5"/>
+                  <rect x="38" y="12" width="14" height="7" stroke-width="1.4"/>
+                  <rect x="56" y="12" width="14" height="7" stroke-width="1.4"/>
+                  <circle cx="98" cy="15" r="3" stroke-width="1.5"/>
+                  
+                  <!-- CPU Socket in Upper Center (Hotspot 1) -->
+                  <rect x="42" y="28" width="34" height="36" stroke-width="2"/>
+                  <rect x="47" y="33" width="24" height="26" stroke-width="1.6"/>
+                  <rect x="51" y="37" width="16" height="18" stroke-width="1.2"/>
+                  <g class="hotspot-marker" data-hotspot="cpu-socket" transform="translate(59, 46)" title="Gusa kuchunguza Soketi ya CPU!">
+                    <circle class="pulse" cx="0" cy="0" r="9" fill="none" stroke="#dc2626" />
+                    <circle cx="0" cy="0" r="4.5" fill="#dc2626" />
+                  </g>
+
+                  <!-- Vertical RAM Slots on Right (Hotspot 2) -->
+                  <rect x="85" y="25" width="5" height="44" stroke-width="1.5"/>
+                  <rect x="94" y="25" width="5" height="44" stroke-width="1.5"/>
+                  <g class="hotspot-marker" data-hotspot="ram-slots" transform="translate(90, 47)" title="Gusa kuchunguza Nafasi za RAM!">
+                    <circle class="pulse" cx="0" cy="0" r="9" fill="none" stroke="#dc2626" />
+                    <circle cx="0" cy="0" r="4.5" fill="#dc2626" />
+                  </g>
+
+                  <!-- Chipset / Heatsink & CMOS Battery (Hotspot 3) -->
+                  <circle cx="31" cy="75" r="5.5" stroke-width="1.6"/>
+                  <rect x="44" y="72" width="30" height="10" stroke-width="1.6"/>
+                  <g class="hotspot-marker" data-hotspot="cmos-battery" transform="translate(31, 75)" title="Gusa kuchunguza Betri ya CMOS!">
+                    <circle class="pulse" cx="0" cy="8" r="9" fill="none" stroke="#dc2626" />
+                    <circle cx="0" cy="8" r="4" fill="#dc2626" />
+                  </g>
+
+                  <!-- Horizontal PCIe Expansion Slots (Hotspot 4) -->
+                  <rect x="24" y="90" width="52" height="6" rx="1" stroke-width="1.6"/>
+                  <rect x="24" y="102" width="52" height="6" rx="1" stroke-width="1.6"/>
+                  <rect x="24" y="116" width="36" height="6" rx="1" stroke-width="1.6"/>
+                  <g class="hotspot-marker" data-hotspot="pcie-slots" transform="translate(50, 93)" title="Gusa kuchunguza Nafasi za PCIe!">
+                    <circle class="pulse" cx="0" cy="0" r="9" fill="none" stroke="#dc2626" />
+                    <circle cx="0" cy="0" r="4.5" fill="#dc2626" />
+                  </g>
+
+                  <!-- Southbridge Heatsink on Bottom Right -->
+                  <rect x="84" y="92" width="16" height="32" stroke-width="1.7"/>
+                  <line x1="88" y1="96" x2="88" y2="120" stroke-width="1.2"/>
+                  <line x1="92" y1="96" x2="92" y2="120" stroke-width="1.2"/>
+                  <line x1="96" y1="96" x2="96" y2="120" stroke-width="1.2"/>
+                </svg>
+              </div>
+
+              <p class="ink-line">
+                <span class="ink-black">2. </span>
+                <span class="ink-black ink-underline translatable-term" data-term="motherboard">Motherboard</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">The motherboard is the main circuit board of the</p>
+              <p class="ink-line pl-5">computer. It connects all the hardware components</p>
+              <p class="ink-line pl-5">like CPU, RAM, Storage devices and other parts so</p>
+              <p class="ink-line pl-5">they can work together.</p>
+              <p class="ink-line pl-5">
+                <span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> ASUS, Gigabyte, MSI.
+              </p>
+            </div>
+
+            <!-- 3. RAM (Lines 18 to 23) -->
+            <div class="hw-section" data-section-id="ram">
+              <div class="swahili-sticky-note" data-sticky-id="ram">
+                <strong>🪚 Meza ya Fundi Seremala (Workbench):</strong> Fundi huweka mbao anazochonga sasa hivi hapa mezani. Akizima taa au akiondoka (power off), meza inafutwa safi! Ndiyo maana inaitwa <em>Volatile / Temporary Memory</em> (Kumbukumbu ya Muda).
+              </div>
+
+              <!-- Hand-Drawn Tilted RAM Diagram on the right -->
+              <div class="diagram-float cursor-pointer hover:scale-105 transition-transform" style="top: 6px; right: 2px;" title="Bofya kuona mzunguko wa data na CPU!" onclick="window.runDataFlowSimulator()">
+                <svg id="ram-diagram-svg" class="ink-svg w-[156px] h-[110px]" viewBox="0 0 165 115">
+                  <g transform="rotate(-25 82 58)">
+                    <!-- Main Stick Body -->
+                    <rect class="ram-body-box" x="10" y="34" width="144" height="34" rx="2" stroke-width="2.2"/>
+                    <rect x="13" y="37" width="138" height="28" rx="1" stroke-width="1.2"/>
+                    <!-- 4 Memory Chips inside -->
+                    <rect x="20" y="41" width="18" height="20" stroke-width="1.8"/>
+                    <rect x="23" y="44" width="12" height="14" stroke-width="1.1"/>
+                    <rect x="52" y="41" width="18" height="20" stroke-width="1.8"/>
+                    <rect x="55" y="44" width="12" height="14" stroke-width="1.1"/>
+                    <rect x="86" y="41" width="18" height="20" stroke-width="1.8"/>
+                    <rect x="89" y="44" width="12" height="14" stroke-width="1.1"/>
+                    <rect x="118" y="41" width="18" height="20" stroke-width="1.8"/>
+                    <rect x="121" y="44" width="12" height="14" stroke-width="1.1"/>
+                    <!-- Bottom Gold Fingers Edge Connector with Key Notch -->
+                    <path d="M14 68v8h64v-4h6v4h66v-8" stroke-width="1.8"/>
+                    <path d="M20 68v8 M26 68v8 M32 68v8 M38 68v8 M44 68v8 M50 68v8 M56 68v8 M62 68v8 M68 68v8 M74 68v8 M90 68v8 M96 68v8 M102 68v8 M108 68v8 M114 68v8 M120 68v8 M126 68v8 M132 68v8 M138 68v8 M144 68v8" stroke-width="1.4"/>
+                  </g>
+                </svg>
+              </div>
+
+              <p class="ink-line">
+                <span class="ink-black">3. </span>
+                <span class="ink-black ink-underline translatable-term" data-term="ram">RAM (Random Access Memory)</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">RAM is a <span class="translatable-term" data-term="temporary-memory">temporary memory</span>. It stores data and</p>
+              <p class="ink-line pl-5">instructions that are currently being used. When</p>
+              <p class="ink-line pl-5">we turn off the computer, the data in RAM is lost.</p>
+              <p class="ink-line pl-5">RAM helps the computer to work faster.</p>
+              <p class="ink-line pl-5">
+                <span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> 4GB, 8GB, 16GB, 32GB.
+              </p>
+            </div>
+
+            <!-- 4. Storage Devices (Lines 24 to 29) -->
+            <div class="hw-section" data-section-id="storage">
+              <div class="swahili-sticky-note" data-sticky-id="storage">
+                <strong>🌾 Ghala Kuu la Kudumu (Storehouse):</strong> Kama vile ghala la kuhifadhia magunia ya mahindi. Picha, video na miziki yako inahifadhiwa hapa kwa usalama hata umeme ukikatika (Non-Volatile Storage).
+              </div>
+
+              <!-- Side-by-side HDD and SSD Diagrams -->
+              <div class="diagram-float" style="top: 6px; right: 4px;">
+                <svg class="ink-svg w-[168px] h-[112px]" viewBox="0 0 175 115">
+                  <!-- Left Box: HDD -->
+                  <rect x="6" y="8" width="74" height="94" rx="5" stroke-width="2.2"/>
+                  <!-- 4 Corner Screws -->
+                  <circle cx="13" cy="15" r="2" fill="#1b387b"/>
+                  <circle cx="73" cy="15" r="2" fill="#1b387b"/>
+                  <circle cx="13" cy="95" r="2" fill="#1b387b"/>
+                  <circle cx="73" cy="95" r="2" fill="#1b387b"/>
+                  <!-- Platter & Spindle -->
+                  <circle cx="43" cy="46" r="26" stroke-width="1.9"/>
+                  <circle cx="43" cy="46" r="7" stroke-width="1.7"/>
+                  <circle cx="43" cy="46" r="2" fill="#1b387b"/>
+                  <!-- Actuator Arm -->
+                  <path d="M16 86 L37 58 L41 61 L22 90 Z" fill="#f1eee6" stroke="#1b387b" stroke-width="1.7"/>
+                  <circle cx="19" cy="87" r="3.5" stroke-width="1.6"/>
+                  <text class="diagram-text-label" data-label-id="HDD" x="45" y="94" text-anchor="middle" font-size="14">HDD</text>
+                  <rect class="recall-dropzone hidden" data-target-id="HDD" x="25" y="78" width="40" height="22" rx="3" />
+
+                  <!-- Right Box: SSD -->
+                  <rect x="98" y="8" width="70" height="90" rx="5" stroke-width="2.2"/>
+                  <!-- Bottom Connector Lip -->
+                  <line x1="103" y1="94" x2="163" y2="94" stroke-width="1.5"/>
+                  <!-- 4 Corner Dots -->
+                  <circle cx="105" cy="16" r="2" fill="#1b387b"/>
+                  <circle cx="161" cy="16" r="2" fill="#1b387b"/>
+                  <circle cx="105" cy="86" r="2" fill="#1b387b"/>
+                  <circle cx="161" cy="86" r="2" fill="#1b387b"/>
+                  <text class="diagram-text-label" data-label-id="SSD" x="133" y="57" text-anchor="middle" font-size="18" letter-spacing="0.5">SSD</text>
+                  <rect class="recall-dropzone hidden" data-target-id="SSD" x="110" y="40" width="46" height="26" rx="3" />
+                </svg>
+              </div>
+
+              <p class="ink-line">
+                <span class="ink-black">4. </span>
+                <span class="ink-black ink-underline translatable-term" data-term="storage">Storage Devices</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">Storage devices are used to store data, programs</p>
+              <p class="ink-line pl-5">and files permanently. Even when we turn off the</p>
+              <p class="ink-line pl-5">computer, the data remains stored.</p>
+              <p class="ink-line pl-5">
+                <span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> Hard Disk, SSD, Pen Drive, Memory Card,
+              </p>
+              <p class="ink-line pl-24">CD / DVD.</p>
+            </div>
+
+            <!-- 5. Power Supply (SMPS) (Lines 30 to 34) -->
+            <div class="hw-section" data-section-id="smps">
+              <div class="swahili-sticky-note" data-sticky-id="smps">
+                <strong>⚡ Transfoma ya Kompyuta:</strong> Umeme wa TANESCO ukutani (240V AC) una nguvu kubwa ya kuunguza vifaa. SMPS inabadilisha umeme huo na kuushusha kuwa 12V na 5V DC salama kwa ubao mama na diski.
+              </div>
+
+              <!-- Isometric 3D SMPS Power Supply Diagram -->
+              <div class="diagram-float" style="top: -4px; right: 4px;">
+                <svg class="ink-svg w-[162px] h-[116px]" viewBox="0 0 170 120">
+                  <!-- Isometric Top Face -->
+                  <polygon points="8,30 52,8 160,22 118,46" stroke-width="2"/>
+                  <!-- Front Face -->
+                  <polygon points="8,30 118,46 118,108 8,92" stroke-width="2.2"/>
+                  <!-- Right Isometric Side Face -->
+                  <polygon points="118,46 160,22 160,82 118,108" stroke-width="2.1"/>
+
+                  <!-- Circular Cooling Fan Grill on Front Left -->
+                  <g transform="translate(42, 65)">
+                    <circle cx="0" cy="0" r="24" stroke-width="1.9"/>
+                    <circle cx="0" cy="0" r="18" stroke-width="1.5"/>
+                    <circle cx="0" cy="0" r="12" stroke-width="1.4"/>
+                    <circle cx="0" cy="0" r="5.5" stroke-width="1.6"/>
+                    <!-- Fan Diagonal Crossbars -->
+                    <line x1="-17" y1="-17" x2="17" y2="17" stroke-width="1.5"/>
+                    <line x1="17" y1="-17" x2="-17" y2="17" stroke-width="1.5"/>
+                  </g>
+
+                  <!-- Power Switch & AC Socket on Front Right -->
+                  <rect x="82" y="54" width="22" height="14" rx="1.5" stroke-width="1.7"/>
+                  <rect x="86" y="57" width="14" height="8" stroke-width="1.3"/>
+                  <line x1="93" y1="57" x2="93" y2="65" stroke-width="1.3"/>
+
+                  <!-- 3-Pin AC Socket below switch -->
+                  <rect x="80" y="76" width="26" height="17" rx="2" stroke-width="1.8"/>
+                  <rect x="84" y="80" width="18" height="10" rx="1" stroke-width="1.3"/>
+                  <circle cx="93" cy="83" r="1.3" fill="#1b387b"/>
+                  <circle cx="89" cy="87" r="1.3" fill="#1b387b"/>
+                  <circle cx="97" cy="87" r="1.3" fill="#1b387b"/>
+
+                  <!-- Honeycomb / Dash Vents on Right Isometric Panel -->
+                  <g stroke-width="1.6">
+                    <line x1="126" y1="50" x2="131" y2="47"/><line x1="136" y1="44" x2="141" y2="41"/><line x1="146" y1="38" x2="151" y2="35"/>
+                    <line x1="126" y1="59" x2="131" y2="56"/><line x1="136" y1="53" x2="141" y2="50"/><line x1="146" y1="47" x2="151" y2="44"/>
+                    <line x1="126" y1="68" x2="131" y2="65"/><line x1="136" y1="62" x2="141" y2="59"/><line x1="146" y1="56" x2="151" y2="53"/>
+                    <line x1="126" y1="77" x2="131" y2="74"/><line x1="136" y1="71" x2="141" y2="68"/><line x1="146" y1="65" x2="151" y2="62"/>
+                    <line x1="126" y1="86" x2="131" y2="83"/><line x1="136" y1="80" x2="141" y2="77"/><line x1="146" y1="74" x2="151" y2="71"/>
+                    <line x1="126" y1="95" x2="131" y2="92"/><line x1="136" y1="89" x2="141" y2="86"/><line x1="146" y1="83" x2="151" y2="80"/>
+                  </g>
+                  
+                  <text class="diagram-text-label" data-label-id="SMPS" x="80" y="32" text-anchor="middle" font-size="13">SMPS</text>
+                  <rect class="recall-dropzone hidden" data-target-id="SMPS" x="60" y="18" width="40" height="20" rx="3" />
+                </svg>
+              </div>
+
+              <p class="ink-line">
+                <span class="ink-black">5. </span>
+                <span class="ink-black ink-underline translatable-term" data-term="smps">Power Supply (SMPS)</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">The power supply converts the high voltage electricity</p>
+              <p class="ink-line pl-5">from the main supply to <span class="translatable-term" data-term="dc-power">low voltage DC power</span> which</p>
+              <p class="ink-line pl-5">is required by the computer components.</p>
+              <p class="ink-line pl-5">
+                <span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> SMPS (Switched Mode Power Supply).
+              </p>
+            </div>
+
+          </div>
+
+          <!-- Footer Watermark -->
+          <div class="page-footer-watermark">
+            <span>★ festomanolo.com</span>
+          </div>
+        </article>
+
+        <!-- =========================================================
+             PAGE 2: COMPUTER BASICS (PART-4) - INPUT & OUTPUT DEVICES
+             ========================================================= -->
+        <article class="notebook-page page-stacked-right" data-page-index="1">
+          <div class="paper-grain"></div>
+          <div class="lighting-overlay"></div>
+
+          <!-- Metallic Paperclip with Mwalimu Voice Note -->
+          <div class="paperclip-hanger" data-page-audio="1" title="Bonyeza kusikiliza Sauti ya Mwalimu (Audio Note)">
+            <svg class="w-8 h-12" viewBox="0 0 32 48" fill="none">
+              <path d="M10 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#8a929e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+                    filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))"/>
+              <path d="M11 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#f1f5f9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- Mwalimu Audio Note Dropdown -->
+          <div class="mwalimu-audio-card hidden" id="audio-card-1">
+            <div class="flex items-center justify-between border-b border-amber-900/10 pb-1 mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">🎙️</span>
+                <span class="font-bold text-[11.5px] text-zinc-800">Mwalimu Voice Note</span>
+              </div>
+              <span class="text-[9px] bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded font-mono font-semibold">0 KB Bando</span>
+            </div>
+            <p class="text-[10.5px] text-zinc-600 leading-tight mb-2 font-sans">
+              Vifaa vya pembezoni: Kibodi, Kipanya, Kioo (VDU), na Kichapishi. Mstari wa njano unakwenda sambamba na maelezo.
+            </p>
+            <div class="flex items-center gap-2">
+              <button class="play-mwalimu-btn px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-zinc-900 text-xs font-bold rounded shadow-sm transition flex items-center gap-1 cursor-pointer" data-page="1">
+                <span class="play-icon">▶</span> <span class="play-text">Sikiliza</span>
+              </button>
+              <div class="flex-1 bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                <div class="audio-progress-bar h-full bg-amber-500 w-0 transition-all duration-200"></div>
+              </div>
+              <span class="audio-time text-[9.5px] font-mono text-zinc-500">0:00</span>
+            </div>
+          </div>
+
+          <div class="page-header">
+            <h1 class="page-main-title editable-region" spellcheck="false">
+              Computer Basics &nbsp;(Part - 4)
+            </h1>
+            <div class="vidyalekhan-stamp">
+              <div class="flex items-center gap-1">
+                <span class="font-serif font-bold text-[14.5px] tracking-[0.14em] leading-none">MANOLO</span>
+                <svg class="w-4 h-4 stroke-[#c64b65] fill-none" viewBox="0 0 24 24" stroke-width="1.8">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                </svg>
+              </div>
+              <div class="text-[8.5px] font-sans tracking-wider leading-[11px] mt-0.5 text-[#c64b65]/90">
+                <div>DATE <span class="inline-block w-14 border-b border-[#c64b65]/60"></span></div>
+                <div>PAGE <span class="inline-block w-14 border-b border-[#c64b65]/60 text-center font-mono">02</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-body editable-region" spellcheck="false">
+            <div class="hw-section" data-section-id="intro-io">
+              <div class="swahili-sticky-note" data-sticky-id="intro-io">
+                <strong>📌 Vifaa vya Pembezoni (Peripherals):</strong> Ni sawa na milango ya fahamu ya binadamu (macho, masikio na mdomo). Vifaa hivi vinamwezesha mtumiaji kuwasiliana na kompyuta kwa kuingiza maagizo na kupokea majibu.
+              </div>
+              <p class="ink-line">
+                <span class="margin-num">8)</span>
+                <span class="ink-black ink-underline translatable-term" data-term="input-output">Input and Output (I/O) Peripheral Devices</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">Peripheral devices allow users to communicate with the</p>
+              <p class="ink-line">computer by feeding instructions and receiving processed results.</p>
+            </div>
+
+            <!-- 1. Keyboard -->
+            <div class="hw-section" data-section-id="keyboard">
+              <div class="swahili-sticky-note" data-sticky-id="keyboard">
+                <strong>⌨️ Kibodi:</strong> Kifaa cha msingi cha kuingizia maandishi, namba na amri. Ina vitufe 104 kwa mpangilio wa kawaida wa QWERTY.
+              </div>
+              <div class="diagram-float" style="top: 12px; right: 6px;">
+                <svg class="ink-svg w-[158px] h-[96px]" viewBox="0 0 165 100">
+                  <!-- Cord -->
+                  <path d="M82 28 C82 12, 110 18, 115 4" stroke-width="1.8"/>
+                  <!-- Keyboard Frame -->
+                  <rect x="8" y="28" width="148" height="62" rx="4" stroke-width="2.2"/>
+                  <!-- Key Matrix -->
+                  <g stroke-width="1.5">
+                    <rect x="16" y="35" width="12" height="9"/><rect x="32" y="35" width="12" height="9"/><rect x="48" y="35" width="12" height="9"/><rect x="64" y="35" width="12" height="9"/><rect x="80" y="35" width="12" height="9"/><rect x="96" y="35" width="12" height="9"/><rect x="112" y="35" width="12" height="9"/><rect x="128" y="35" width="18" height="9"/>
+                    <rect x="16" y="49" width="16" height="10"/><rect x="36" y="49" width="12" height="10"/><rect x="52" y="49" width="12" height="10"/><rect x="68" y="49" width="12" height="10"/><rect x="84" y="49" width="12" height="10"/><rect x="100" y="49" width="12" height="10"/><rect x="116" y="49" width="30" height="10"/>
+                    <rect x="16" y="64" width="22" height="10"/><rect x="42" y="64" width="72" height="10"/><rect x="118" y="64" width="28" height="10"/>
+                  </g>
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">1. </span><span class="ink-black ink-underline translatable-term" data-term="keyboard">Keyboard (Input Device)</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">A keyboard is the primary input device used for</p>
+              <p class="ink-line pl-5">typing text, numbers, and commands into the system.</p>
+              <p class="ink-line pl-5">A standard QWERTY keyboard has 104 keys.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Keys</span><span class="ink-black"> :</span> Alphanumeric, Function (F1-F12), Control keys.</p>
+            </div>
+
+            <!-- 2. Mouse -->
+            <div class="hw-section" data-section-id="mouse">
+              <div class="swahili-sticky-note" data-sticky-id="mouse">
+                <strong>🖱️ Kipanya cha Macho:</strong> Kifaa kinachomwezesha mtumiaji kuelekeza na kubonyeza vitu kwenye skrini kwa kutumia miale ya mwanga (Optical sensor).
+              </div>
+              <div class="diagram-float" style="top: 6px; right: 24px;">
+                <svg class="ink-svg w-[110px] h-[126px]" viewBox="0 0 110 130">
+                  <path d="M55 24 C55 10, 75 14, 70 2" stroke-width="1.8"/>
+                  <rect x="25" y="24" width="60" height="94" rx="30" stroke-width="2.2"/>
+                  <line x1="25" y1="62" x2="85" y2="62" stroke-width="1.7"/>
+                  <line x1="55" y1="24" x2="55" y2="62" stroke-width="1.7"/>
+                  <rect x="51" y="34" width="8" height="18" rx="4" fill="#f1eee6" stroke-width="1.8"/>
+                  <text class="diagram-text-label" data-label-id="MOUSE" x="55" y="96" text-anchor="middle" font-size="14">MOUSE</text>
+                  <rect class="recall-dropzone hidden" data-target-id="MOUSE" x="30" y="80" width="50" height="22" rx="3" />
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">2. </span><span class="ink-black ink-underline translatable-term" data-term="mouse">Optical Mouse (Pointing Device)</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">The mouse is a hand-held pointing input device that</p>
+              <p class="ink-line pl-5">controls the cursor movement on the display screen.</p>
+              <p class="ink-line pl-5">It performs left-click, right-click, dragging and scrolling.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Types</span><span class="ink-black"> :</span> Wired USB Mouse, Wireless Bluetooth Mouse.</p>
+            </div>
+
+            <!-- 3. Monitor -->
+            <div class="hw-section" data-section-id="monitor">
+              <div class="swahili-sticky-note" data-sticky-id="monitor">
+                <strong>🖥️ Kioo cha Kompyuta (VDU):</strong> Huonyesha taarifa zilizochakatwa kwa mfumo wa maandishi au picha laini (Soft Copy) usizoweza kuzishika mkononi.
+              </div>
+              <div class="diagram-float" style="top: 8px; right: 10px;">
+                <svg class="ink-svg w-[148px] h-[120px]" viewBox="0 0 155 125">
+                  <rect x="14" y="10" width="126" height="80" rx="4" stroke-width="2.2"/>
+                  <rect x="20" y="16" width="114" height="66" rx="2" stroke-width="1.5"/>
+                  <line x1="32" y1="36" x2="62" y2="24" stroke-width="1.5"/>
+                  <line x1="36" y1="48" x2="80" y2="28" stroke-width="1.5"/>
+                  <text class="diagram-text-label" data-label-id="VDU / LED" x="82" y="58" text-anchor="middle" font-size="16">VDU / LED</text>
+                  <rect class="recall-dropzone hidden" data-target-id="VDU / LED" x="50" y="42" width="64" height="24" rx="3" />
+                  <!-- Stand -->
+                  <path d="M66 90 L62 108 L92 108 L88 90" stroke-width="2"/>
+                  <rect x="44" y="108" width="66" height="7" rx="3" stroke-width="2"/>
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">3. </span><span class="ink-black ink-underline translatable-term" data-term="monitor">Monitor / VDU (Output Device)</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">Monitor (Visual Display Unit) is the main output</p>
+              <p class="ink-line pl-5">device that displays processed information, images,</p>
+              <p class="ink-line pl-5">and videos in soft-copy visual form on the screen.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> LCD, LED, OLED, Curved Gaming Monitors.</p>
+            </div>
+
+            <!-- 4. Printer -->
+            <div class="hw-section" data-section-id="printer">
+              <div class="swahili-sticky-note" data-sticky-id="printer">
+                <strong>🖨️ Kichapishi (Printer):</strong> Hutoa matokeo magumu kwenye karatasi halisi (Hard Copy). Kasi yake hupimwa kwa idadi ya kurasa kwa dakika (Pages Per Minute - PPM).
+              </div>
+              <div class="diagram-float" style="top: 8px; right: 12px;">
+                <svg class="ink-svg w-[145px] h-[116px]" viewBox="0 0 150 120">
+                  <!-- Top Paper Feed -->
+                  <path d="M42 36 L42 10 L108 10 L108 36" stroke-width="1.8"/>
+                  <!-- Printer Body -->
+                  <rect x="18" y="36" width="114" height="50" rx="5" stroke-width="2.2"/>
+                  <line x1="18" y1="54" x2="132" y2="54" stroke-width="1.5"/>
+                  <circle cx="114" cy="45" r="3" fill="#1b387b"/>
+                  <circle cx="102" cy="45" r="2.5" stroke-width="1.5"/>
+                  <text class="diagram-text-label" data-label-id="PRINTER" x="75" y="48" text-anchor="middle" font-size="11">PRINTER</text>
+                  <rect class="recall-dropzone hidden" data-target-id="PRINTER" x="52" y="38" width="46" height="18" rx="3" />
+                  <!-- Printed Sheet coming out -->
+                  <path d="M38 74 L32 108 L118 108 L112 74 Z" fill="#f1eee6" stroke-width="1.9"/>
+                  <line x1="46" y1="84" x2="104" y2="84" stroke-width="1.4"/>
+                  <line x1="44" y1="92" x2="98" y2="92" stroke-width="1.4"/>
+                  <line x1="42" y1="100" x2="88" y2="100" stroke-width="1.4"/>
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">4. </span><span class="ink-black ink-underline translatable-term" data-term="printer">Printer (Hard-Copy Output)</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">A printer takes digital documents and graphics from</p>
+              <p class="ink-line pl-5">the computer and prints them onto physical paper.</p>
+              <p class="ink-line pl-5">Speed is measured in PPM (Pages Per Minute).</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> Laser Printer, Inkjet, Dot-Matrix Printer.</p>
+            </div>
+
+            <!-- 5. Speakers & Scanner -->
+            <div class="hw-section" data-section-id="scanner-speakers">
+              <p class="ink-line"><span class="ink-black">5. </span><span class="ink-black ink-underline">Scanner & Audio Speakers :</span></p>
+              <p class="ink-line pl-5">A scanner converts paper documents into digital images,</p>
+              <p class="ink-line pl-5">while speakers convert digital audio signals into sound waves.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Note</span><span class="ink-black"> :</span> Touchscreen acts as both Input & Output device!</p>
+            </div>
+          </div>
+
+          <!-- Footer Watermark -->
+          <div class="page-footer-watermark">
+            <span>★ festomanolo.com</span>
+          </div>
+        </article>
+
+        <!-- =========================================================
+             PAGE 3: COMPUTER NETWORKS (PART-1) - TOPOLOGIES
+             ========================================================= -->
+        <article class="notebook-page page-stacked-right" data-page-index="2">
+          <div class="paper-grain"></div>
+          <div class="lighting-overlay"></div>
+
+          <!-- Metallic Paperclip with Mwalimu Voice Note -->
+          <div class="paperclip-hanger" data-page-audio="2" title="Bonyeza kusikiliza Sauti ya Mwalimu (Audio Note)">
+            <svg class="w-8 h-12" viewBox="0 0 32 48" fill="none">
+              <path d="M10 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#8a929e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+                    filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))"/>
+              <path d="M11 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#f1f5f9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- Mwalimu Audio Note Dropdown -->
+          <div class="mwalimu-audio-card hidden" id="audio-card-2">
+            <div class="flex items-center justify-between border-b border-amber-900/10 pb-1 mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">🎙️</span>
+                <span class="font-bold text-[11.5px] text-zinc-800">Mwalimu Voice Note</span>
+              </div>
+              <span class="text-[9px] bg-amber-200/80 text-amber-900 px-1.5 py-0.5 rounded font-mono font-semibold">0 KB Bando</span>
+            </div>
+            <p class="text-[10.5px] text-zinc-600 leading-tight mb-2 font-sans">
+              Topolojia za mtandao: Nyota, Basi, Pete, na Wavu. Mstari wa njano unakwenda sambamba na sauti.
+            </p>
+            <div class="flex items-center gap-2">
+              <button class="play-mwalimu-btn px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-zinc-900 text-xs font-bold rounded shadow-sm transition flex items-center gap-1 cursor-pointer" data-page="2">
+                <span class="play-icon">▶</span> <span class="play-text">Sikiliza</span>
+              </button>
+              <div class="flex-1 bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                <div class="audio-progress-bar h-full bg-amber-500 w-0 transition-all duration-200"></div>
+              </div>
+              <span class="audio-time text-[9.5px] font-mono text-zinc-500">0:00</span>
+            </div>
+          </div>
+
+          <div class="page-header">
+            <h1 class="page-main-title editable-region" spellcheck="false">
+              Computer Networks &nbsp;(Part - 1)
+            </h1>
+            <div class="vidyalekhan-stamp">
+              <div class="flex items-center gap-1">
+                <span class="font-serif font-bold text-[14.5px] tracking-[0.14em] leading-none">MANOLO</span>
+                <svg class="w-4 h-4 stroke-[#c64b65] fill-none" viewBox="0 0 24 24" stroke-width="1.8">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                </svg>
+              </div>
+              <div class="text-[8.5px] font-sans tracking-wider leading-[11px] mt-0.5 text-[#c64b65]/90">
+                <div>DATE <span class="inline-block w-14 border-b border-[#c64b65]/60"></span></div>
+                <div>PAGE <span class="inline-block w-14 border-b border-[#c64b65]/60 text-center font-mono">03</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-body editable-region" spellcheck="false">
+            <div class="hw-section" data-section-id="intro-net">
+              <div class="swahili-sticky-note" data-sticky-id="intro-net">
+                <strong>🌐 Topolojia ya Mtandao:</strong> Ni jinsi kompyuta na nyaya za mtandao wa ndani (LAN) zilivyopangwa kijiometri kwenye ofisi, shule au maabara.
+              </div>
+              <p class="ink-line">
+                <span class="margin-num">9)</span>
+                <span class="ink-black ink-underline translatable-term" data-term="network-topologies">Network Topologies (Physical Layout)</span><span class="ink-black"> :</span>
+              </p>
+              <p class="ink-line pl-5">Network topology refers to the geometric arrangement of</p>
+              <p class="ink-line">computers (nodes) and cables in a Local Area Network (LAN).</p>
+            </div>
+
+            <!-- 1. Star Topology -->
+            <div class="hw-section" data-section-id="star">
+              <div class="swahili-sticky-note" data-sticky-id="star">
+                <strong>⭐ Topolojia ya Nyota:</strong> Kila kompyuta imeunganishwa moja kwa moja kwenye Switch au Hub ya kati. Kebo ya mwanafunzi mmoja ikikatika, wengine wote wanaendelea kupata mtandao vizuri!
+              </div>
+              <div class="diagram-float" style="top: 6px; right: 10px;">
+                <svg class="ink-svg w-[142px] h-[126px]" viewBox="0 0 150 130">
+                  <!-- Central Switch Hub -->
+                  <rect x="52" y="48" width="46" height="28" rx="3" stroke-width="2.1"/>
+                  <text class="diagram-text-label" data-label-id="HUB" x="75" y="67" text-anchor="middle" font-size="13">HUB</text>
+                  <rect class="recall-dropzone hidden" data-target-id="HUB" x="56" y="52" width="38" height="20" rx="3" />
+                  <!-- Spokes -->
+                  <line x1="75" y1="48" x2="75" y2="26" stroke-width="1.8"/>
+                  <line x1="52" y1="62" x2="28" y2="62" stroke-width="1.8"/>
+                  <line x1="98" y1="62" x2="122" y2="62" stroke-width="1.8"/>
+                  <line x1="60" y1="76" x2="40" y2="102" stroke-width="1.8"/>
+                  <line x1="90" y1="76" x2="110" y2="102" stroke-width="1.8"/>
+                  <!-- Outer Nodes -->
+                  <rect x="63" y="8" width="24" height="18" rx="2" stroke-width="1.9"/>
+                  <rect x="6" y="53" width="22" height="18" rx="2" stroke-width="1.9"/>
+                  <rect x="122" y="53" width="22" height="18" rx="2" stroke-width="1.9"/>
+                  <rect x="24" y="102" width="24" height="18" rx="2" stroke-width="1.9"/>
+                  <rect x="102" y="102" width="24" height="18" rx="2" stroke-width="1.9"/>
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">1. </span><span class="ink-black ink-underline translatable-term" data-term="star-topology">Star Topology</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">All nodes are individually connected to a central</p>
+              <p class="ink-line pl-5">device called a Hub or Switch. If one cable fails,</p>
+              <p class="ink-line pl-5">only that computer is affected, making it very reliable.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Used in</span><span class="ink-black"> :</span> Modern Offices, Schools, Home Wi-Fi LANs.</p>
+            </div>
+
+            <!-- 2. Bus Topology -->
+            <div class="hw-section" data-section-id="bus">
+              <div class="swahili-sticky-note" data-sticky-id="bus">
+                <strong>🚌 Topolojia ya Basi:</strong> Kama basi la abiria linalosafiri kwenye barabara kuu moja ya lami (Backbone). Njia hiyo ya kati ikikatika, basi zima linasimama na mtandao wote unakufa!
+              </div>
+              <div class="diagram-float" style="top: 8px; right: 6px;">
+                <svg class="ink-svg w-[160px] h-[112px]" viewBox="0 0 165 115">
+                  <!-- Main Coaxial Backbone Line -->
+                  <line x1="14" y1="58" x2="152" y2="58" stroke-width="2.6"/>
+                  <!-- Terminators at both ends -->
+                  <rect x="8" y="50" width="6" height="16" fill="#1b387b"/>
+                  <rect x="152" y="50" width="6" height="16" fill="#1b387b"/>
+                  <!-- Drop lines & PCs -->
+                  <line x1="38" y1="58" x2="38" y2="34" stroke-width="1.8"/>
+                  <rect x="25" y="14" width="26" height="20" rx="2" stroke-width="1.9"/>
+                  <line x1="82" y1="58" x2="82" y2="82" stroke-width="1.8"/>
+                  <rect x="69" y="82" width="26" height="20" rx="2" stroke-width="1.9"/>
+                  <line x1="124" y1="58" x2="124" y2="34" stroke-width="1.8"/>
+                  <rect x="111" y="14" width="26" height="20" rx="2" stroke-width="1.9"/>
+                  <text class="diagram-text-label" data-label-id="BACKBONE" x="82" y="51" text-anchor="middle" font-size="11">BACKBONE</text>
+                  <rect class="recall-dropzone hidden" data-target-id="BACKBONE" x="52" y="38" width="60" height="18" rx="3" />
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">2. </span><span class="ink-black ink-underline translatable-term" data-term="bus-topology">Bus Topology</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">Every computer connects to a single shared main</p>
+              <p class="ink-line pl-5">cable called the Backbone. It is inexpensive and easy</p>
+              <p class="ink-line pl-5">to install, but if the main cable breaks, the network stops.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Components</span><span class="ink-black"> :</span> Coaxial Cable, T-Connectors, Terminators.</p>
+            </div>
+
+            <!-- 3. Ring Topology -->
+            <div class="hw-section" data-section-id="ring">
+              <div class="swahili-sticky-note" data-sticky-id="ring">
+                <strong>⭕ Topolojia ya Pete:</strong> Kompyuta zimejipanga kwa duara. Taarifa husafiri mwelekeo mmoja tu kwa kutumia pasi maalum (Token). Hakuna data zinazogongana!
+              </div>
+              <div class="diagram-float" style="top: 6px; right: 14px;">
+                <svg class="ink-svg w-[134px] h-[126px]" viewBox="0 0 140 130">
+                  <circle cx="70" cy="65" r="38" stroke-width="2.1" stroke-dasharray="4 2"/>
+                  <!-- 4 Ring Nodes -->
+                  <rect x="57" y="10" width="26" height="18" rx="2" fill="#f1eee6" stroke-width="2"/>
+                  <rect x="57" y="102" width="26" height="18" rx="2" fill="#f1eee6" stroke-width="2"/>
+                  <rect x="10" y="56" width="24" height="18" rx="2" fill="#f1eee6" stroke-width="2"/>
+                  <rect x="106" y="56" width="24" height="18" rx="2" fill="#f1eee6" stroke-width="2"/>
+                  <text class="diagram-text-label" data-label-id="RING" x="70" y="70" text-anchor="middle" font-size="14">RING</text>
+                  <rect class="recall-dropzone hidden" data-target-id="RING" x="52" y="56" width="36" height="22" rx="3" />
+                </svg>
+              </div>
+              <p class="ink-line"><span class="ink-black">3. </span><span class="ink-black ink-underline translatable-term" data-term="ring-topology">Ring Topology</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">Nodes are connected in a closed circular loop where</p>
+              <p class="ink-line pl-5">each device has exactly two neighbors. Data travels in</p>
+              <p class="ink-line pl-5">one direction using a special control frame called a Token.</p>
+              <p class="ink-line pl-5"><span class="ink-black ink-underline">Advantage</span><span class="ink-black"> :</span> No data collisions even under heavy traffic.</p>
+            </div>
+
+            <!-- 4. Mesh & Hybrid -->
+            <div class="hw-section" data-section-id="mesh">
+              <div class="swahili-sticky-note" data-sticky-id="mesh">
+                <strong>🕸️ Topolojia ya Wavu (Mesh):</strong> Kila kompyuta imeunganishwa moja kwa moja na kompyuta nyingine zote. Salama zaidi hata nyaya kadhaa zikikatika, lakini gharama yake ya nyaya ni kubwa sana: n(n-1)/2.
+              </div>
+              <p class="ink-line"><span class="ink-black">4. </span><span class="ink-black ink-underline translatable-term" data-term="mesh-topology">Mesh Topology</span><span class="ink-black"> :</span></p>
+              <p class="ink-line pl-5">Every node is directly interconnected with every other</p>
+              <p class="ink-line pl-5">node. Total cables required = <span class="ink-black">n(n - 1) / 2</span>. Highest fault</p>
+              <p class="ink-line pl-5">tolerance and security, used in military and core Internet.</p>
+            </div>
+          </div>
+
+          <!-- Footer Watermark -->
+          <div class="page-footer-watermark">
+            <span>★ festomanolo.com</span>
+          </div>
+        </article>
+
+        <!-- =========================================================
+             PAGE 4: NECTA COMPETENCY-BASED CHECKPOINT (JARIBIO LA UMAHIRI)
+             ========================================================= -->
+        <article class="notebook-page page-stacked-right" data-page-index="3">
+          <div class="paper-grain"></div>
+          <div class="lighting-overlay"></div>
+
+          <!-- Metallic Paperclip with Mwalimu Voice Note -->
+          <div class="paperclip-hanger" data-page-audio="3" title="Bonyeza kusikiliza Sauti ya Mwalimu (Audio Note)">
+            <svg class="w-8 h-12" viewBox="0 0 32 48" fill="none">
+              <path d="M10 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#8a929e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+                    filter="drop-shadow(0 2px 3px rgba(0,0,0,0.4))"/>
+              <path d="M11 14v22a8 8 0 0 0 16 0V10a6 6 0 0 0-12 0v24a4 4 0 0 0 8 0V15" 
+                    stroke="#f1f5f9" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- Mwalimu Audio Note Dropdown -->
+          <div class="mwalimu-audio-card hidden" id="audio-card-3">
+            <div class="flex items-center justify-between border-b border-amber-900/10 pb-1 mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm">🎙️</span>
+                <span class="font-bold text-[11.5px] text-zinc-800">Mwalimu Exam Instructions</span>
+              </div>
+              <span class="text-[9px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-mono font-semibold">NECTA CBA</span>
+            </div>
+            <p class="text-[10.5px] text-zinc-600 leading-tight mb-2 font-sans">
+              "Jibu maswali ya Section A na B kwa makini. Ukimaliza bofya kitufe chekundu usahihishiwe na Mwalimu!"
+            </p>
+            <div class="flex items-center gap-2">
+              <button class="play-mwalimu-btn px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-zinc-900 text-xs font-bold rounded shadow-sm transition flex items-center gap-1 cursor-pointer" data-page="3">
+                <span class="play-icon">▶</span> <span class="play-text">Sikiliza</span>
+              </button>
+              <div class="flex-1 bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                <div class="audio-progress-bar h-full bg-amber-500 w-0 transition-all duration-200"></div>
+              </div>
+              <span class="audio-time text-[9.5px] font-mono text-zinc-500">0:00</span>
+            </div>
+          </div>
+
+          <!-- Red Score Circle (Appears upon grading) -->
+          <div id="necta-score-stamp" class="red-score-circle hidden">
+            <span class="text-[10px] tracking-wider uppercase font-sans font-bold">ALAMA</span>
+            <span id="final-score-val" class="text-2xl font-extrabold leading-none">15/15</span>
+            <span id="final-grade-badge" class="text-[10.5px] mt-0.5 font-bold text-center">★ DARAJA A</span>
+          </div>
+
+          <!-- Header -->
+          <div class="page-header" style="height: 80px;">
+            <div class="text-center w-full px-4">
+              <div class="necta-stamp-box text-[11px]">
+                BARAZA LA MITIHANI LA TANZANIA (NECTA) — TIE COMPETENCY CHECKPOINT 01
+              </div>
+              <div class="text-[12.5px] text-zinc-700 font-sans mt-1 flex items-center justify-center gap-3">
+                <span><strong>Muda:</strong> 20 Mins</span>
+                <span>•</span>
+                <span><strong>Jumla ya Alama:</strong> 15</span>
+                <span>•</span>
+                <span><strong>Kidato:</strong> Form 1</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ruled Body Content -->
+          <div class="page-body" style="font-size: 16.5px;">
+            
+            <!-- SECTION A -->
+            <div class="hw-section mb-1.5" data-section-id="necta-sec-a">
+              <p class="ink-line">
+                <span class="margin-num font-bold text-red-800">A</span>
+                <span class="ink-black ink-underline font-bold">SECTION A: Objective & Matching Items (Alama 6)</span>
+              </p>
+              
+              <!-- Q1 -->
+              <p class="ink-line">
+                <span class="ink-black">1. </span>
+                <span class="text-zinc-800 font-medium">Scenario:</span> Juma was typing his assignment in Morogoro when power suddenly went off.
+              </p>
+              <p class="ink-line pl-4">
+                Upon restart, his unsaved document was lost. Which component lost Juma's work?
+                <span id="q1-mark-icon" class="inline-block ml-2"></span>
+              </p>
+              
+              <!-- Q1 Options -->
+              <div class="grid grid-cols-2 gap-x-2 pl-4 py-0.5 text-[15.5px]">
+                <label class="flex items-center gap-2 cursor-pointer hover:text-blue-900">
+                  <input type="radio" name="necta_q1" value="A" class="accent-red-600"> <span>(A) Hard Disk Drive</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-blue-900 font-semibold" id="q1-opt-b">
+                  <input type="radio" name="necta_q1" value="B" class="accent-red-600"> <span>(B) RAM (Random Access Memory)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-blue-900">
+                  <input type="radio" name="necta_q1" value="C" class="accent-red-600"> <span>(C) SMPS Power Supply</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-blue-900">
+                  <input type="radio" name="necta_q1" value="D" class="accent-red-600"> <span>(D) Optical Mouse</span>
+                </label>
+              </div>
+              <div id="q1-teacher-remark" class="teacher-red-comment pl-5 hidden"></div>
+
+              <!-- Q2 -->
+              <p class="ink-line mt-1">
+                <span class="ink-black">2. </span>
+                <span class="ink-black ink-underline">Matching Analogy:</span> Match Column A (Tanzanian Analogy) with Component:
+                <span id="q2-mark-icon" class="inline-block ml-2"></span>
+              </p>
+              <div class="pl-4 space-y-1 text-[15px]">
+                <div class="flex items-center justify-between pr-4">
+                  <span>(i) Meza ya fundi seremala (Workbench for active work):</span>
+                  <select id="match-q2-1" class="bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-sans">
+                    <option value="">-- Chagua Kifaa --</option>
+                    <option value="RAM">RAM (Temporary Memory)</option>
+                    <option value="HDD">Hard Disk / SSD</option>
+                    <option value="SMPS">SMPS Power Supply</option>
+                    <option value="CPU">CPU</option>
+                  </select>
+                </div>
+                <div class="flex items-center justify-between pr-4">
+                  <span>(ii) Ghala la kudumu la kuhifadhia nafaka (Storehouse):</span>
+                  <select id="match-q2-2" class="bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-sans">
+                    <option value="">-- Chagua Kifaa --</option>
+                    <option value="RAM">RAM</option>
+                    <option value="HDD">Hard Disk / SSD (Storage)</option>
+                    <option value="SMPS">SMPS</option>
+                    <option value="CPU">CPU</option>
+                  </select>
+                </div>
+                <div class="flex items-center justify-between pr-4">
+                  <span>(iii) Transfoma inayoshusha umeme mkali wa TANESCO:</span>
+                  <select id="match-q2-3" class="bg-amber-50 border border-amber-300 rounded px-1.5 py-0.5 text-xs font-sans">
+                    <option value="">-- Chagua Kifaa --</option>
+                    <option value="RAM">RAM</option>
+                    <option value="HDD">HDD / SSD</option>
+                    <option value="SMPS">SMPS (Power Supply)</option>
+                    <option value="CPU">CPU</option>
+                  </select>
+                </div>
+              </div>
+              <div id="q2-teacher-remark" class="teacher-red-comment pl-5 hidden"></div>
+            </div>
+
+            <!-- SECTION B -->
+            <div class="hw-section" data-section-id="necta-sec-b">
+              <p class="ink-line">
+                <span class="margin-num font-bold text-red-800">B</span>
+                <span class="ink-black ink-underline font-bold">SECTION B: Short Competency Scenario Questions (Alama 9)</span>
+              </p>
+
+              <!-- Q3 -->
+              <p class="ink-line">
+                <span class="ink-black">3. </span>
+                A school in Mwanza has a low budget for a library network with 5 PCs.
+              </p>
+              <p class="ink-line pl-4">
+                (a) Which low-cost topology connects all PCs to a single backbone cable?
+                <span id="q3a-mark-icon" class="inline-block ml-2"></span>
+              </p>
+              <div class="pl-5 flex items-center gap-2">
+                <span class="text-zinc-600 font-sans text-xs">Jibu:</span>
+                <input id="ans-q3a" type="text" placeholder="Andika jina la topolojia hapa (mfano: Bus Topology)..." 
+                       class="flex-1 bg-transparent border-b-2 border-zinc-400 focus:border-blue-700 outline-none font-bold text-[17px] text-[#1b387b] px-2 py-0.5" />
+              </div>
+              <div id="q3a-teacher-remark" class="teacher-red-comment pl-5 hidden"></div>
+
+              <p class="ink-line pl-4 mt-1">
+                (b) What is the main danger if this single backbone cable is accidentally severed?
+                <span id="q3b-mark-icon" class="inline-block ml-2"></span>
+              </p>
+              <div class="pl-5 flex items-center gap-2">
+                <span class="text-zinc-600 font-sans text-xs">Jibu:</span>
+                <input id="ans-q3b" type="text" placeholder="Andika nini kitatokea (mfano: Mtandao wote unakufa / halts)..." 
+                       class="flex-1 bg-transparent border-b-2 border-zinc-400 focus:border-blue-700 outline-none font-bold text-[17px] text-[#1b387b] px-2 py-0.5" />
+              </div>
+              <div id="q3b-teacher-remark" class="teacher-red-comment pl-5 hidden"></div>
+
+              <!-- Q4 -->
+              <p class="ink-line mt-1">
+                <span class="ink-black">4. </span>
+                During inspection, Asha spotted a small silver coin battery (CR2032) on the motherboard.
+              </p>
+              <p class="ink-line pl-4">
+                State its crucial function when the computer is completely unplugged from the wall.
+                <span id="q4-mark-icon" class="inline-block ml-2"></span>
+              </p>
+              <div class="pl-5 flex items-center gap-2">
+                <span class="text-zinc-600 font-sans text-xs">Jibu:</span>
+                <input id="ans-q4" type="text" placeholder="Andika kazi ya betri ya CMOS (mfano: Kutunza saa, tarehe na BIOS)..." 
+                       class="flex-1 bg-transparent border-b-2 border-zinc-400 focus:border-blue-700 outline-none font-bold text-[17px] text-[#1b387b] px-2 py-0.5" />
+              </div>
+              <div id="q4-teacher-remark" class="teacher-red-comment pl-5 hidden"></div>
+            </div>
+
+            <!-- Red Pen Submit & Grading Bar -->
+            <div class="mt-4 pt-2 border-t border-red-900/20 flex flex-wrap items-center justify-between gap-3">
+              <button id="submit-grading-btn" class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-lg shadow-md hover:shadow-lg transition flex items-center gap-2 cursor-pointer">
+                <span>🔴</span> <span>Sahihisha kwa Kalamu Nyekundu (Submit for Red-Pen Grading)</span>
+              </button>
+              <button id="reset-quiz-btn" class="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-100 text-xs font-medium rounded-lg transition cursor-pointer">
+                🔄 Futa / Jaribu Tena
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Footer Watermark -->
+          <div class="page-footer-watermark">
+            <span>★ NECTA Checkpoint • festomanolo.com</span>
+          </div>
+        </article>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Floating Sketch Inserter Drawer (Visible when Edit Mode is active) -->
+  <div id="sketch-drawer" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden bg-zinc-900/95 backdrop-blur-md border border-zinc-700/80 rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3 text-xs">
+    <span class="text-zinc-300 font-medium">✏️ Edit Mode Active:</span>
+    <span class="text-zinc-400 hidden sm:inline">Click any line on the notebook to type in ballpoint ink!</span>
+    <button id="add-stamp-btn" class="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 transition cursor-pointer">
+      + Append Section Row
+    </button>
+  </div>
+
+  <!-- Active Recall Scramble Tray -->
+  <div id="scramble-tray" class="scramble-tray hidden">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold text-amber-300">🧩 Recall:</span>
+      <span class="text-[11px] text-zinc-300 hidden md:inline">Bofya karatasi kisha bofya mchoro sahihi:</span>
+      <div id="slips-container" class="flex flex-wrap items-center gap-2"></div>
+      <button id="close-recall-btn" class="ml-2 text-zinc-400 hover:text-white text-xs px-2 py-0.5 rounded bg-zinc-800 cursor-pointer">✖</button>
+    </div>
+  </div>
+
+  <!-- Motherboard Component Inspection Cutout Modal -->
+  <div id="cutout-modal-container" class="hidden"></div>
+
+  <!-- Pencil Annotation Floating Card -->
+  <div id="pencil-annot-card" class="pencil-annot-card hidden"></div>
+
+  <!-- Synced Fluorescent Yellow Highlighter Overlay -->
+  <div id="synced-highlighter" class="synced-highlighter hidden"></div>
+
+  <!-- Sleek Dark Glassmorphic Floating Pill Navigation Bar -->
+  <nav class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[96%] max-w-4xl bg-zinc-900/90 backdrop-blur-xl border border-zinc-700/80 rounded-full px-3 sm:px-4 py-2 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-wrap items-center justify-between gap-2 text-xs">
+    
+    <!-- Page Flip Controls -->
+    <div class="flex items-center gap-1.5">
+      <button id="prev-page-btn" class="px-2.5 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-100 font-medium transition flex items-center gap-1 cursor-pointer">
+        <span>←</span> <span class="hidden sm:inline">Prev</span>
+      </button>
+      <div id="page-indicator" class="px-3 py-1 font-semibold text-amber-200/90 bg-zinc-800/60 rounded-full border border-zinc-700/60">
+        Page 1 / 4
+      </div>
+      <button id="next-page-btn" class="px-2.5 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-100 font-medium transition flex items-center gap-1 cursor-pointer">
+        <span class="hidden sm:inline">Next</span> <span>→</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="h-5 w-[1px] bg-zinc-700 hidden md:block"></div>
+
+    <!-- Educational Innovation Tools -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <!-- "Fafanua kwa Kiswahili" Toggle -->
+      <button id="toggle-swahili-btn" class="px-2.5 py-1.5 rounded-full bg-amber-950/70 hover:bg-amber-900/80 text-amber-200 font-semibold border border-amber-600/50 transition flex items-center gap-1.5 cursor-pointer" title="Washa / Zima ufafanuzi wa Kiswahili juu ya aya">
+        <span class="text-xs">🇹🇿</span>
+        <span id="swahili-btn-label">Fafanua</span>
+      </button>
+
+      <!-- Animated Data Flow Simulator -->
+      <button id="run-dataflow-btn" class="px-2.5 py-1.5 rounded-full bg-red-950/70 hover:bg-red-900/80 text-red-200 font-semibold border border-red-600/50 transition flex items-center gap-1.5 cursor-pointer" title="Anzisha mzunguko wa data kati ya RAM na CPU!">
+        <span class="text-xs">⚡</span>
+        <span class="hidden sm:inline">Data Flow</span>
+      </button>
+
+      <!-- Active Recall / Label Scramble Toggle -->
+      <button id="toggle-recall-btn" class="px-2.5 py-1.5 rounded-full bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 font-semibold border border-purple-600/50 transition flex items-center gap-1.5 cursor-pointer" title="Ficha majina ya michoro ujipime kwa kukokota vipande vya karatasi">
+        <span class="text-xs">🧩</span>
+        <span class="hidden sm:inline">Active Recall</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="h-5 w-[1px] bg-zinc-700 hidden lg:block"></div>
+
+    <!-- Interactive Customizer Controls -->
+    <div class="flex items-center gap-2">
+      <!-- Edit Text Toggle -->
+      <button id="toggle-edit-btn" class="px-2.5 py-1.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium border border-zinc-700 transition flex items-center gap-1.5 cursor-pointer">
+        <span class="w-2 h-2 rounded-full bg-emerald-400" id="edit-dot"></span>
+        <span id="edit-btn-label">Edit</span>
+      </button>
+
+      <!-- Ink Color Switcher -->
+      <button id="ink-color-btn" class="px-2.5 py-1.5 rounded-full bg-blue-950/80 hover:bg-blue-900/80 text-blue-200 font-medium border border-blue-700/60 transition flex items-center gap-1.5 cursor-pointer" title="Switch Ballpoint Ink Color">
+        <span id="ink-swatch" class="w-2.5 h-2.5 rounded-full bg-[#1b387b] ring-1 ring-white/40"></span>
+        <span id="ink-label" class="hidden sm:inline">Bic Blue</span>
+      </button>
+
+      <!-- Lighting Slider -->
+      <div class="hidden xl:flex items-center gap-2 bg-zinc-800/80 px-2.5 py-1 rounded-full border border-zinc-700/70">
+        <span class="text-[10.5px] text-zinc-400">Light</span>
+        <input id="lighting-slider" type="range" min="0" max="100" value="88" class="w-14 accent-amber-400 cursor-pointer h-1.5 bg-zinc-700 rounded-lg" />
+      </div>
+
+      <!-- Add Blank Page Button -->
+      <button id="add-page-btn" class="px-2.5 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-medium border border-amber-500/40 transition cursor-pointer">
+        + Page
+      </button>
+    </div>
+
+  </nav>
+
+  <script>
+    (function () {
+      // Core State Variables
+      let currentPage = 0;
+      let isEditMode = false;
+      let isSwahiliMode = false;
+      let isRecallMode = false;
+      let isDataFlowActive = false;
+      let inkThemeIndex = 0;
+      let fitScaleMode = true;
+
+      // Mwalimu Audio State
+      let currentPlayingPage = -1;
+      let speechTimer = null;
+      let speechElapsed = 0;
+      let audioCtx = null;
+
+      const inkThemes = [
+        { name: 'Bic Blue', body: '#1b387b', heading: '#1e232a', swatch: '#1b387b' },
+        { name: 'Gel Black', body: '#23272e', heading: '#0f172a', swatch: '#23272e' },
+        { name: 'Indigo Fountain', body: '#2e1f6e', heading: '#1c1917', swatch: '#2e1f6e' }
+      ];
+
+      // Bilingual Swahili-English Dictionary for Pencil Annotations
+      const BILINGUAL_DICT = {
+        'cpu': {
+          en: 'Central Processing Unit (CPU)',
+          sw: 'Kitengo Kikuu cha Uchakataji (Ubongo wa Kompyuta)',
+          analogy: 'Mfano: Rubani anayeendesha ndege au dereva mkuu. Yeye ndiye anayeamuru safari nzima, kufanya mahesabu yote na kutoa amri kwa vifaa vyote.',
+          tip: 'Katika mtihani wa NECTA, taja kuwa ni "Brain of the computer" inayofanya mzunguko wa Fetch-Decode-Execute.'
+        },
+        'brain': {
+          en: 'Brain of the Computer',
+          sw: 'Ubongo wa Kompyuta',
+          analogy: 'Kama ubongo unavyoongoza viungo vya binadamu (macho, mikono, miguu), CPU huongoza ubao mama, diski na kumbukumbu zote.',
+          tip: 'Huchakata data, kufanya hesabu zote (ALU), na kusimamia shughuli zote za kompyuta.'
+        },
+        'motherboard': {
+          en: 'Motherboard (Mainboard)',
+          sw: 'Ubao Mama wa Mzunguko Mkuu',
+          analogy: 'Mfano: Barabara Kuu ya Morogoro au Soko Kuu la Kariakoo linalounganisha mitaa yote. Vifaa vyote (CPU, RAM, Diski) vinachomekwa hapa ili viwasiliane bila kikwazo.',
+          tip: 'TIE Exam tip: Huunganisha vifaa vyote kupitia njia za umeme ziitwazo System Buses (Data bus & Address bus).'
+        },
+        'ram': {
+          en: 'RAM (Random Access Memory)',
+          sw: 'Kumbukumbu ya Muda (Meza ya Fundi Seremala)',
+          analogy: 'Mfano wa meza ya fundi seremala (workbench): Fundi huweka mbao anazochonga sasa hivi hapa mezani. Akizima taa au akiondoka jioni (power off), meza inafutwa safi!',
+          tip: 'NECTA Keyword: "Volatile Memory" — data zote hupotea kompyuta ikizimwa umeme.'
+        },
+        'temporary-memory': {
+          en: 'Temporary / Volatile Memory',
+          sw: 'Kumbukumbu ya Muda Inayopotea',
+          analogy: 'Mfano: Maandishi ya chaki ubaoni. Maji yakimwagika au mwalimu akifuta (umeme kukatika), kila kitu kinafutika.',
+          tip: 'Kinyume chake ni Permanent Storage (Diski Ngumu) inayotunza faili hata umeme ukikatika.'
+        },
+        'storage': {
+          en: 'Storage Devices (HDD & SSD)',
+          sw: 'Vifaa vya Kuhifadhia (Ghala la Kudumu)',
+          analogy: 'Mfano: Ghala kuu la kuhifadhia magunia ya nafaka. Hata mvua inyeshe au umeme ukatike kwa mwezi mzima, picha, video na miziki yako inabaki salama.',
+          tip: 'NECTA Keyword: "Non-Volatile Storage" — uhifadhi wa kudumu usiopoteza data.'
+        },
+        'smps': {
+          en: 'SMPS (Switched Mode Power Supply)',
+          sw: 'Ugavi wa Umeme (Transfoma ya Kompyuta)',
+          analogy: 'Mfano: Transfoma ya TANESCO mtaani. Umeme wa ukutani ni mkali sana (240V AC). SMPS inauchakata na kuushusha kuwa umeme salama wa 12V na 5V DC usiouza vifaa vyepesi.',
+          tip: 'Converts high voltage AC power into regulated low voltage DC power.'
+        },
+        'dc-power': {
+          en: 'Low Voltage DC Power',
+          sw: 'Umeme Mdogo wa Mkondo Mnyoofu (DC)',
+          analogy: 'Umeme mpole na salama wa betri unaotumiwa na chipu za kielektroniki bila kuzichoma.',
+          tip: 'Kompyuta huhitaji volti za +12V, +5V, na +3.3V DC.'
+        },
+        'input-output': {
+          en: 'Input and Output (I/O) Peripheral Devices',
+          sw: 'Vifaa vya Kuingizia na Kutoa Matokeo',
+          analogy: 'Milango ya fahamu ya kompyuta: Vifaa vya kuingiza (Input) ni kama macho na masikio; vifaa vya kutoa matokeo (Output) ni kama mdomo au mikono.',
+          tip: 'Input: Keyboard, Mouse, Scanner. Output: Monitor, Printer, Speaker.'
+        },
+        'keyboard': {
+          en: 'Keyboard (Input Device)',
+          sw: 'Kibodi (Kifaa Kikuu cha Kuingizia Maandishi)',
+          analogy: 'Kalamu au taipureta ya kisasa yenye vibonyezo 104 vya mtindo wa kawaida wa QWERTY.',
+          tip: 'Primary text input device with Alphanumeric, Function (F1-F12), and Control keys.'
+        },
+        'mouse': {
+          en: 'Optical Mouse (Pointing Device)',
+          sw: 'Kipanya cha Macho (Kielekezi)',
+          analogy: 'Kidole chako cha kuelekeza vitu sokoni. Miale ya mwanga (LED/Laser) inasoma mwendo wako na kuhamisha kishale kwenye kioo.',
+          tip: 'Pointing device for clicking, double-clicking, right-clicking, and dragging.'
+        },
+        'monitor': {
+          en: 'Monitor / VDU (Visual Display Unit)',
+          sw: 'Kioo cha Kompyuta (Kifaa cha Matokeo Laini)',
+          analogy: 'Kioo cha televisheni kinachoonyesha matokeo laini (Soft Copy) unayoweza kuyatazama lakini huwezi kuyashika mkononi.',
+          tip: 'Outputs soft copy visual display using pixels (LCD, LED, OLED).'
+        },
+        'printer': {
+          en: 'Printer (Hard-Copy Output Device)',
+          sw: 'Kichapishi (Kifaa cha Matokeo Halisi ya Karatasi)',
+          analogy: 'Kama mashine ya kutoa risiti au tiketi za basi: Inatoa taarifa halisi kwenye karatasi unayoweza kuishika (Hard Copy).',
+          tip: 'Speed is measured in Pages Per Minute (PPM). Types: Laser, Inkjet, Dot-Matrix.'
+        },
+        'network-topologies': {
+          en: 'Network Topologies',
+          sw: 'Topolojia za Mtandao (Mpangilio wa Kijiometri)',
+          analogy: 'Ramani au mchoro unaoonyesha jinsi kompyuta na nyaya zinavyoungana katika jengo, shule au ofisi.',
+          tip: 'The geometric arrangement of nodes and cables in a Local Area Network (LAN).'
+        },
+        'star-topology': {
+          en: 'Star Topology',
+          sw: 'Topolojia ya Nyota',
+          analogy: 'Matawi ya mti yaliyoungana na shina moja la kati, au vituo vya polisi vikiunganishwa na Makao Makuu (Switch/Hub). Waya mmoja ukikatika, wengine wanaendelea vizuri!',
+          tip: 'All nodes connect to a central Hub/Switch. Highly reliable, single node failure does not affect others.'
+        },
+        'bus-topology': {
+          en: 'Bus Topology',
+          sw: 'Topolojia ya Basi la Abiria',
+          analogy: 'Basi la daladala linalosafiri kwenye barabara kuu moja ya lami (Backbone). Barabara hii ya kati ikikatika, basi zima linasimama na mtandao wote unakufa!',
+          tip: 'Single shared backbone cable with terminators at both ends. Inexpensive but single point of failure.'
+        },
+        'ring-topology': {
+          en: 'Ring Topology',
+          sw: 'Topolojia ya Pete / Duara',
+          analogy: 'Mchezo wa watoto wa kukimbiza kijiti duarani. Data husafiri upande mmoja tu kwa zamu kwa kutumia cheti maalum kiitwacho Token.',
+          tip: 'Circular closed loop using Token passing. No data collisions even under heavy load.'
+        },
+        'mesh-topology': {
+          en: 'Mesh Topology',
+          sw: 'Topolojia ya Wavu',
+          analogy: 'Wavu wa buibui au njia za siri za kijeshi: Kila kompyuta ina waya wa moja kwa moja kwenda kwa nyingine zote. Salama zaidi lakini gharama kubwa ya nyaya: n(n-1)/2.',
+          tip: 'High redundancy and fault tolerance. Formula: n(n - 1) / 2 cables.'
+        }
+      };
+
+      // Mwalimu Narration Scripts per Page (Zero Bandwidth)
+      const MWALIMU_SCRIPTS = [
+        // Page 1: Hardware Components
+        {
+          text: "Habari za leo mwanafunzi! Karibu kwenye somo la vifaa vya ndani vya kompyuta. Kwanza kabisa tuna CPU, yaani Central Processing Unit. Huyu ndiye ubongo wa kompyuta anayefanya hesabu zote kwa hatua za Fetch, Decode, na Execute. Pili, tuna Ubao Mama au Motherboard, inayounganisha vifaa vyote kama barabara kuu. Tatu, tuna RAM, kumbukumbu ya muda inayofanana na meza ya fundi seremala: kazi zilizopo mezani hufutika umeme ukizimwa! Nne, tuna Storage Devices kama Hard Disk na SSD, hili ni ghala la kudumu la faili zako. Na tano, tuna SMPS, transfoma inayoshusha umeme mkali wa TANESCO kuwa salama. Bofya mchoro wa ubao mama au CPU ili kujionea mzunguko wa data!",
+          duration: 38,
+          highlights: [
+            { start: 0, end: 7, target: '[data-section-id="intro-hw"]' },
+            { start: 7, end: 15, target: '[data-section-id="cpu"]' },
+            { start: 15, end: 23, target: '[data-section-id="motherboard"]' },
+            { start: 23, end: 30, target: '[data-section-id="ram"]' },
+            { start: 30, end: 35, target: '[data-section-id="storage"]' },
+            { start: 35, end: 38, target: '[data-section-id="smps"]' }
+          ]
+        },
+        // Page 2: Peripherals
+        {
+          text: "Katika ukurasa huu tunajifunza vifaa vya pembezoni au Peripherals. Kibodi ndicho kifaa kikuu cha kuingizia maandishi kwa mpangilio wa QWERTY. Kipanya au Optical Mouse kinatumika kuelekeza na kubonyeza vitu kwa sensor ya mwanga. Kioo cha Monitor kinakupa matokeo laini ya Soft Copy, na Kichapishi cha Printer kinakupa matokeo magumu kwenye karatasi au Hard Copy!",
+          duration: 26,
+          highlights: [
+            { start: 0, end: 5, target: '[data-section-id="intro-io"]' },
+            { start: 5, end: 12, target: '[data-section-id="keyboard"]' },
+            { start: 12, end: 18, target: '[data-section-id="mouse"]' },
+            { start: 18, end: 22, target: '[data-section-id="monitor"]' },
+            { start: 22, end: 26, target: '[data-section-id="printer"]' }
+          ]
+        },
+        // Page 3: Networks
+        {
+          text: "Karibu kwenye Topolojia za Mtandao! Topolojia ya Nyota inaunganisha kompyuta zote kwenye Switch au Hub ya kati. Kebo moja ikikatika wengine wanaendelea. Topolojia ya Basi inatumia waya mmoja mkuu wa kati uitwao Backbone. Topolojia ya Pete inasafiri kwa mduara kwa kutumia Token. Na Topolojia ya Wavu kila kifaa kimeungana na kingine moja kwa moja!",
+          duration: 25,
+          highlights: [
+            { start: 0, end: 5, target: '[data-section-id="intro-net"]' },
+            { start: 5, end: 12, target: '[data-section-id="star"]' },
+            { start: 12, end: 17, target: '[data-section-id="bus"]' },
+            { start: 17, end: 21, target: '[data-section-id="ring"]' },
+            { start: 21, end: 25, target: '[data-section-id="mesh"]' }
+          ]
+        },
+        // Page 4: NECTA Checkpoint
+        {
+          text: "Hili ni jaribio la umahiri la NECTA Form 1. Soma maswali ya Section A na Section B kwa umakini. Jibu kuhusu RAM, analojia za vifaa, na topolojia ya basi. Ukimaliza kuandika majibu yako kwenye mistari, bofya kitufe chekundu cha chini ili Mwalimu akusahihishie kwa kalamu nyekundu!",
+          duration: 22,
+          highlights: [
+            { start: 0, end: 11, target: '[data-section-id="necta-sec-a"]' },
+            { start: 11, end: 22, target: '[data-section-id="necta-sec-b"]' }
+          ]
+        }
+      ];
+
+      // Audio Sound Synthesizer for Offline Zero-Bandwidth Chimes
+      function playTone(freq, duration = 0.15, type = 'sine') {
+        try {
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + duration);
+        } catch (e) {
+          // Audio fallback gracefully ignored
+        }
+      }
+
+      // DOM Elements
+      const spreadEl = document.getElementById('notebook-spread');
+      const viewportEl = document.getElementById('pages-viewport');
+      const prevBtn = document.getElementById('prev-page-btn');
+      const nextBtn = document.getElementById('next-page-btn');
+      const pageIndicator = document.getElementById('page-indicator');
+      const toggleEditBtn = document.getElementById('toggle-edit-btn');
+      const editBtnLabel = document.getElementById('edit-btn-label');
+      const editDot = document.getElementById('edit-dot');
+      const sketchDrawer = document.getElementById('sketch-drawer');
+      const addStampBtn = document.getElementById('add-stamp-btn');
+      const inkColorBtn = document.getElementById('ink-color-btn');
+      const inkSwatch = document.getElementById('ink-swatch');
+      const inkLabel = document.getElementById('ink-label');
+      const lightingSlider = document.getElementById('lighting-slider');
+      const addPageBtn = document.getElementById('add-page-btn');
+      const zoomToggleBtn = document.getElementById('zoom-toggle-btn');
+
+      // Educational Elements
+      const toggleSwahiliBtn = document.getElementById('toggle-swahili-btn');
+      const swahiliBtnLabel = document.getElementById('swahili-btn-label');
+      const runDataFlowBtn = document.getElementById('run-dataflow-btn');
+      const toggleRecallBtn = document.getElementById('toggle-recall-btn');
+      const scrambleTray = document.getElementById('scramble-tray');
+      const slipsContainer = document.getElementById('slips-container');
+      const closeRecallBtn = document.getElementById('close-recall-btn');
+      const cutoutModalContainer = document.getElementById('cutout-modal-container');
+      const pencilAnnotCard = document.getElementById('pencil-annot-card');
+      const syncedHighlighter = document.getElementById('synced-highlighter');
+
+      // 1. Human Micro-Jitter
+      function applyHumanJitter(root = document) {
+        const lines = root.querySelectorAll('.ink-line');
+        lines.forEach((line, idx) => {
+          const seed = (idx * 9301 + 49297) % 233280;
+          const norm = seed / 233280;
+          const jitterY = ((norm - 0.5) * 1.1).toFixed(2);
+          const jitterRot = ((norm - 0.5) * 0.28).toFixed(2);
+          line.style.setProperty('--jy', `${jitterY}px`);
+          line.style.setProperty('--jr', `${jitterRot}deg`);
+        });
+      }
+
+      // 2. Update Page Stack UI
+      function updatePagesUI() {
+        const pages = Array.from(viewportEl.querySelectorAll('.notebook-page'));
+        const total = pages.length;
+
+        pages.forEach((page, index) => {
+          page.classList.remove('page-active', 'page-flipped-left', 'page-stacked-right');
+          if (index < currentPage) {
+            page.classList.add('page-flipped-left');
+          } else if (index === currentPage) {
+            page.classList.add('page-active');
+          } else {
+            page.classList.add('page-stacked-right');
+          }
+        });
+
+        pageIndicator.textContent = `Page ${currentPage + 1} / ${total}`;
+        prevBtn.disabled = currentPage === 0;
+        nextBtn.disabled = currentPage === total - 1;
+
+        // Dismiss open popups when flipping pages
+        if (pencilAnnotCard) pencilAnnotCard.classList.add('hidden');
+        if (cutoutModalContainer) cutoutModalContainer.classList.add('hidden');
+        stopMwalimuSpeech();
+
+        // Sync Swahili Sticky Notes visibility for newly active page
+        syncSwahiliStickyNotes();
+
+        // Sync Active Recall if active
+        if (isRecallMode) {
+          setupActiveRecallTray();
+        }
+      }
+
+      function goToNextPage() {
+        const total = viewportEl.querySelectorAll('.notebook-page').length;
+        if (currentPage < total - 1) {
+          currentPage++;
+          playTone(520, 0.08);
+          updatePagesUI();
+        }
+      }
+
+      function goToPrevPage() {
+        if (currentPage > 0) {
+          currentPage--;
+          playTone(460, 0.08);
+          updatePagesUI();
+        }
+      }
+
+      // 3. Responsive Scaling
+      function updateResponsiveScale() {
+        const vw = window.innerWidth;
+        if (!fitScaleMode && vw > 780) {
+          spreadEl.style.transform = 'scale(1.06)';
+          spreadEl.style.marginBottom = '65px';
+          return;
+        }
+        if (vw < 772) {
+          const scale = Math.max(0.44, (vw - 24) / 745);
+          spreadEl.style.transform = `scale(${scale})`;
+          const heightDiff = 1068 * (1 - scale);
+          spreadEl.style.marginBottom = `-${Math.round(heightDiff - 40)}px`;
+        } else {
+          spreadEl.style.transform = 'scale(1)';
+          spreadEl.style.marginBottom = '0px';
+        }
+      }
+
+      window.addEventListener('resize', updateResponsiveScale);
+
+      zoomToggleBtn.addEventListener('click', () => {
+        fitScaleMode = !fitScaleMode;
+        zoomToggleBtn.textContent = fitScaleMode ? 'Fit Width (100%)' : 'Zoomed (106%)';
+        updateResponsiveScale();
+      });
+
+      prevBtn.addEventListener('click', goToPrevPage);
+      nextBtn.addEventListener('click', goToNextPage);
+
+      window.addEventListener('keydown', (e) => {
+        if (isEditMode || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        if (e.key === 'ArrowRight') goToNextPage();
+        if (e.key === 'ArrowLeft') goToPrevPage();
+      });
+
+      // Pointer Swipe Navigation
+      let startX = null;
+      let startY = null;
+
+      viewportEl.addEventListener('pointerdown', (e) => {
+        if (isEditMode || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+        startX = e.clientX;
+        startY = e.clientY;
+      });
+
+      viewportEl.addEventListener('pointerup', (e) => {
+        if (isEditMode || startX === null) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+          if (dx < 0) {
+            goToNextPage();
+          } else {
+            goToPrevPage();
+          }
+        } else {
+          const rect = viewportEl.getBoundingClientRect();
+          const relX = e.clientX - rect.left;
+          const relY = e.clientY - rect.top;
+          if (relX > rect.width - 70 && relY > rect.height - 70) {
+            goToNextPage();
+          }
+        }
+        startX = null;
+        startY = null;
+      });
+
+      // 4. Feature 1: Bilingual Pencil Margin (Tap-to-Translate)
+      function setupTapToTranslate() {
+        document.addEventListener('click', (e) => {
+          const termEl = e.target.closest('.translatable-term');
+          if (termEl) {
+            e.stopPropagation();
+            const termKey = termEl.getAttribute('data-term');
+            const data = BILINGUAL_DICT[termKey];
+            if (!data) return;
+
+            playTone(660, 0.08);
+
+            // Position pencil annotation popup card
+            if (!spreadEl.contains(pencilAnnotCard)) spreadEl.appendChild(pencilAnnotCard);
+            const rect = termEl.getBoundingClientRect();
+            const spreadRect = spreadEl.getBoundingClientRect();
+
+            let left = rect.left - spreadRect.left + 20;
+            let top = rect.bottom - spreadRect.top + 8;
+
+            // Keep within bounds
+            if (left + 290 > 720) left = 720 - 300;
+            if (left < 10) left = 10;
+
+            pencilAnnotCard.style.left = `${left}px`;
+            pencilAnnotCard.style.top = `${top}px`;
+
+            pencilAnnotCard.innerHTML = `
+              <div class="flex items-start justify-between border-b border-amber-900/15 pb-1 mb-1.5">
+                <div>
+                  <div class="text-[13px] font-sans font-bold text-blue-900 uppercase tracking-wide leading-tight">${data.en}</div>
+                  <div class="text-[17px] font-bold text-red-900 leading-tight">${data.sw}</div>
+                </div>
+                <button id="close-pencil-card" class="text-zinc-500 hover:text-zinc-800 text-sm font-bold ml-2 cursor-pointer">✖</button>
+              </div>
+              <div class="text-[16px] text-zinc-800 leading-snug mb-2 font-medium">
+                ${data.analogy}
+              </div>
+              <div class="bg-amber-100/70 border border-amber-300/80 rounded px-2 py-1 text-[13.5px] text-amber-950 font-sans">
+                <strong>📝 NECTA Tip:</strong> ${data.tip}
+              </div>
+              <div class="mt-2 pt-1 border-t border-amber-900/10 flex justify-between items-center text-[12px] font-sans text-zinc-500">
+                <span>Daftari la Kiswahili ↔ Kiingereza</span>
+                <button id="speak-term-btn" class="text-blue-700 hover:text-blue-900 font-bold flex items-center gap-1 cursor-pointer">
+                  <span>🔊 Sikiliza</span>
+                </button>
+              </div>
+            `;
+
+            pencilAnnotCard.classList.remove('hidden');
+
+            document.getElementById('close-pencil-card').addEventListener('click', () => {
+              pencilAnnotCard.classList.add('hidden');
+            });
+
+            document.getElementById('speak-term-btn').addEventListener('click', () => {
+              speakText(`${data.sw}. ${data.analogy}`);
+            });
+            return;
+          }
+
+          // Close pencil card if clicked outside
+          if (!e.target.closest('#pencil-annot-card')) {
+            pencilAnnotCard.classList.add('hidden');
+          }
+        });
+      }
+
+      // Feature 1: "Fafanua kwa Kiswahili" Toggle
+      function syncSwahiliStickyNotes() {
+        const activePage = viewportEl.querySelector('.page-active');
+        if (!activePage) return;
+        const stickies = activePage.querySelectorAll('.swahili-sticky-note');
+        stickies.forEach(note => {
+          if (isSwahiliMode) {
+            note.classList.add('visible');
+          } else {
+            note.classList.remove('visible');
+          }
+        });
+      }
+
+      toggleSwahiliBtn.addEventListener('click', () => {
+        isSwahiliMode = !isSwahiliMode;
+        playTone(isSwahiliMode ? 740 : 440, 0.1);
+
+        if (isSwahiliMode) {
+          toggleSwahiliBtn.classList.replace('bg-amber-950/70', 'bg-amber-500');
+          toggleSwahiliBtn.classList.replace('text-amber-200', 'text-zinc-950');
+          swahiliBtnLabel.textContent = 'Fafanua: Wazi';
+        } else {
+          toggleSwahiliBtn.classList.replace('bg-amber-500', 'bg-amber-950/70');
+          toggleSwahiliBtn.classList.replace('text-zinc-950', 'text-amber-200');
+          swahiliBtnLabel.textContent = 'Fafanua';
+        }
+
+        syncSwahiliStickyNotes();
+      });
+
+      // 5. Feature 2: Animated Ink Data Flow Simulator (Fetch-Decode-Execute)
+      window.runDataFlowSimulator = function () {
+        if (currentPage !== 0) {
+          currentPage = 0;
+          updatePagesUI();
+        }
+
+        const overlay = document.getElementById('dataflow-svg-overlay');
+        const badge = document.getElementById('dataflow-hud-badge');
+        const badgeText = document.getElementById('dataflow-hud-text');
+        const cpuCore = document.querySelector('.cpu-core-box');
+        const ramBody = document.querySelector('.ram-body-box');
+
+        if (!overlay || !badge) return;
+
+        overlay.classList.remove('hidden');
+        badge.classList.remove('hidden');
+        isDataFlowActive = true;
+
+        playTone(550, 0.15, 'triangle');
+
+        const steps = [
+          {
+            text: '1. FETCH: Maelekezo yanachukuliwa kutoka RAM kuja kwenye CPU...',
+            action: () => {
+              if (ramBody) ramBody.classList.add('pulse-component');
+              playTone(580, 0.12);
+            }
+          },
+          {
+            text: '2. DECODE: Control Unit (CU) ya CPU inachambua maagizo hayo...',
+            action: () => {
+              if (ramBody) ramBody.classList.remove('pulse-component');
+              if (cpuCore) cpuCore.classList.add('pulse-component');
+              playTone(660, 0.12);
+            }
+          },
+          {
+            text: '3. EXECUTE: ALU inafanya mahesabu na kutekeleza amri!',
+            action: () => {
+              playTone(820, 0.18);
+            }
+          },
+          {
+            text: '4. WRITE-BACK: Matokeo yamerudishwa kwenye RAM tayari kuonyeshwa.',
+            action: () => {
+              playTone(940, 0.2);
+            }
+          }
+        ];
+
+        let stepIdx = 0;
+        function nextFlowStep() {
+          if (stepIdx < steps.length) {
+            badgeText.textContent = steps[stepIdx].text;
+            steps[stepIdx].action();
+            stepIdx++;
+            setTimeout(nextFlowStep, 1800);
+          } else {
+            badgeText.textContent = '✓ Mzunguko wa Data (Machine Cycle) Umekamilika!';
+            setTimeout(() => {
+              overlay.classList.add('hidden');
+              badge.classList.add('hidden');
+              if (cpuCore) cpuCore.classList.remove('pulse-component');
+              if (ramBody) ramBody.classList.remove('pulse-component');
+              isDataFlowActive = false;
+            }, 2500);
+          }
+        }
+
+        nextFlowStep();
+      };
+
+      runDataFlowBtn.addEventListener('click', window.runDataFlowSimulator);
+
+      // Feature 2: Tap-to-Inspect Motherboard Hotspots
+      const HOTSPOT_INFO = {
+        'cpu-socket': {
+          title: 'Soketi ya CPU (Processor Socket)',
+          plug: 'Intel Core / AMD Ryzen Processor',
+          desc: 'Hapa ndipo ubongo wa kompyuta unapoingizwa kwa umakini mkubwa. Ina mamia ya pini ndogo za dhahabu. Lever ya pembeni hufungwa ili kushikilia chipu kwa nguvu.',
+          tieNote: 'NECTA Tip: CPU hutoa joto jingi, hivyo feni na Heatsink huwekwa juu ya soketi hii kwa gundi ya mafuta (Thermal Paste).'
+        },
+        'ram-slots': {
+          title: 'Nafasi za RAM (DIMM Slots)',
+          plug: 'Fimbo za DDR4 / DDR5 RAM',
+          desc: 'Nafasi mbili hadi nne ndefu zenye klipu za plastiki pande zote. Fimbo za RAM huchomekwa hapa ili kompyuta iwe na meza pana ya kufanyia kazi kwa kasi.',
+          tieNote: 'NECTA Tip: Huongeza kasi ya kompyuta kuruhusu kufungua programu nyingi kwa wakati mmoja (Multitasking).'
+        },
+        'cmos-battery': {
+          title: 'Betri ya CMOS (CR2032 3V Coin Cell)',
+          plug: 'Betri Ndogo ya Siliva ya Saa (CR2032)',
+          desc: 'Betri hii inafanya kazi hata ukiitupa kompyuta stoo kwa miezi 6: Inatunza saa, tarehe, na mipangilio ya BIOS isifutike kompyuta ikitolewa ukutani!',
+          tieNote: 'NECTA Tip: Betri hii ikiisha, kompyuta itakusumbua kuomba kuweka tarehe na saa kila unapoiwasha (CMOS Checksum Error).'
+        },
+        'pcie-slots': {
+          title: 'Nafasi za PCIe (PCI Express x16)',
+          plug: 'Kadi ya Picha (GPU) au Kadi ya Mtandao (NIC)',
+          desc: 'Nafasi ya chini kabisa inayoruhusu kuongeza kadi ya michoro ya kisasa (NVIDIA / AMD) kwa ajili ya video zenye ubora mkubwa au kadi ya mtandao wa kasi ya juu.',
+          tieNote: 'NECTA Tip: Hutumika kupanua uwezo wa kompyuta (Expansion Slots).'
+        }
+      };
+
+      function setupMotherboardHotspots() {
+        document.addEventListener('click', (e) => {
+          const hotspot = e.target.closest('.hotspot-marker');
+          if (hotspot) {
+            e.stopPropagation();
+            const spotKey = hotspot.getAttribute('data-hotspot');
+            const info = HOTSPOT_INFO[spotKey];
+            if (!info) return;
+
+            playTone(720, 0.1);
+
+            if (!spreadEl.contains(cutoutModalContainer)) spreadEl.appendChild(cutoutModalContainer);
+            cutoutModalContainer.innerHTML = `
+              <div class="cutout-inspector-card">
+                <div class="flex items-start justify-between border-b border-amber-900/20 pb-1 mb-2">
+                  <div>
+                    <span class="text-[11px] font-sans font-bold bg-red-100 text-red-800 px-1.5 py-0.5 rounded">HOTSPOT INSPECTION</span>
+                    <h3 class="text-[20px] font-bold text-[#1b387b] leading-tight mt-0.5">${info.title}</h3>
+                  </div>
+                  <button id="close-cutout-modal" class="text-zinc-500 hover:text-zinc-900 text-lg font-bold ml-2 cursor-pointer">✖</button>
+                </div>
+                
+                <div class="bg-amber-50/70 p-2 rounded border border-amber-200/80 mb-2">
+                  <span class="text-xs font-sans font-bold text-zinc-600 block">Kifaa Kinachochomekwa:</span>
+                  <span class="text-[17px] font-bold text-zinc-900">🔌 ${info.plug}</span>
+                </div>
+
+                <p class="text-[16px] text-zinc-800 leading-snug mb-2.5">
+                  ${info.desc}
+                </p>
+
+                <div class="bg-blue-50 border border-blue-200 rounded p-2 text-[13px] font-sans text-blue-950">
+                  <strong>💡 ${info.tieNote}</strong>
+                </div>
+
+                <div class="mt-3 pt-1 border-t border-zinc-200 flex justify-end">
+                  <button id="done-cutout-modal" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-xs font-bold cursor-pointer">
+                    Funga & Endelea
+                  </button>
+                </div>
+              </div>
+            `;
+
+            cutoutModalContainer.classList.remove('hidden');
+
+            const closeModal = () => cutoutModalContainer.classList.add('hidden');
+            document.getElementById('close-cutout-modal').addEventListener('click', closeModal);
+            document.getElementById('done-cutout-modal').addEventListener('click', closeModal);
+          }
+        });
+      }
+
+      // Feature 2: Label-Scramble Mode (Active Recall)
+      let activeRecallTarget = null;
+
+      function setupActiveRecallTray() {
+        const activePage = viewportEl.querySelector('.page-active');
+        if (!activePage) return;
+
+        const labels = activePage.querySelectorAll('.diagram-text-label');
+        const dropzones = activePage.querySelectorAll('.recall-dropzone');
+
+        if (labels.length === 0) {
+          scrambleTray.classList.add('hidden');
+          return;
+        }
+
+        // Hide labels and show dropzones
+        labels.forEach(l => l.style.opacity = '0');
+        dropzones.forEach(dz => {
+          dz.classList.remove('hidden');
+          dz.classList.remove('solved');
+        });
+
+        // Collect unique labels
+        const labelList = Array.from(labels).map(l => l.getAttribute('data-label-id'));
+        // Shuffle
+        labelList.sort(() => Math.random() - 0.5);
+
+        slipsContainer.innerHTML = '';
+        labelList.forEach(name => {
+          const rot = (Math.random() * 4 - 2).toFixed(1);
+          const slip = document.createElement('div');
+          slip.className = 'paper-slip';
+          slip.style.setProperty('--rot', `${rot}deg`);
+          slip.setAttribute('data-slip-name', name);
+          slip.textContent = name;
+
+          slip.addEventListener('click', () => {
+            playTone(600, 0.08);
+            document.querySelectorAll('.paper-slip').forEach(s => s.classList.remove('ring-2', 'ring-amber-500'));
+            slip.classList.add('ring-2', 'ring-amber-500');
+            activeRecallTarget = name;
+          });
+
+          slipsContainer.appendChild(slip);
+        });
+
+        scrambleTray.classList.remove('hidden');
+
+        // Dropzone click handlers
+        dropzones.forEach(dz => {
+          dz.onclick = function () {
+            const targetId = dz.getAttribute('data-target-id');
+            if (!activeRecallTarget) {
+              playTone(300, 0.1, 'sawtooth');
+              alert('Kwanza bofya kipande cha karatasi kilicho chini kwenye tray, kisha bofya hapa!');
+              return;
+            }
+
+            if (activeRecallTarget === targetId) {
+              // Success!
+              playTone(880, 0.2);
+              dz.classList.add('solved');
+              const matchingLabel = activePage.querySelector(`.diagram-text-label[data-label-id="${targetId}"]`);
+              if (matchingLabel) matchingLabel.style.opacity = '1';
+
+              const activeSlip = slipsContainer.querySelector(`.paper-slip[data-slip-name="${targetId}"]`);
+              if (activeSlip) {
+                activeSlip.classList.add('placed');
+                activeSlip.classList.remove('ring-2', 'ring-amber-500');
+              }
+              activeRecallTarget = null;
+
+              // Check if all solved
+              const remaining = slipsContainer.querySelectorAll('.paper-slip:not(.placed)').length;
+              if (remaining === 0) {
+                playTone(1050, 0.35);
+                setTimeout(() => {
+                  alert('🌟 Hongera Sana! Umekumbuka na kupanga majina yote ya michoro kwa ufasaha mkubwa!');
+                }, 300);
+              }
+            } else {
+              // Wrong
+              playTone(280, 0.2, 'sawtooth');
+              dz.style.stroke = '#ef4444';
+              dz.style.strokeWidth = '3';
+              setTimeout(() => {
+                dz.style.stroke = '';
+                dz.style.strokeWidth = '';
+              }, 400);
+            }
+          };
+        });
+      }
+
+      function stopActiveRecall() {
+        isRecallMode = false;
+        scrambleTray.classList.add('hidden');
+        toggleRecallBtn.classList.replace('bg-purple-600', 'bg-purple-950/70');
+        toggleRecallBtn.classList.replace('text-white', 'text-purple-200');
+
+        const pages = viewportEl.querySelectorAll('.notebook-page');
+        pages.forEach(p => {
+          p.querySelectorAll('.diagram-text-label').forEach(l => l.style.opacity = '1');
+          p.querySelectorAll('.recall-dropzone').forEach(dz => dz.classList.add('hidden'));
+        });
+      }
+
+      toggleRecallBtn.addEventListener('click', () => {
+        isRecallMode = !isRecallMode;
+        playTone(isRecallMode ? 780 : 420, 0.1);
+
+        if (isRecallMode) {
+          toggleRecallBtn.classList.replace('bg-purple-950/70', 'bg-purple-600');
+          toggleRecallBtn.classList.replace('text-purple-200', 'text-white');
+          setupActiveRecallTray();
+        } else {
+          stopActiveRecall();
+        }
+      });
+
+      closeRecallBtn.addEventListener('click', stopActiveRecall);
+
+      // 6. Feature 3: "Red Pen" NECTA Competency Checkpoint Grading
+      function setupNectaGrading() {
+        const submitBtn = document.getElementById('submit-grading-btn');
+        const resetBtn = document.getElementById('reset-quiz-btn');
+        if (!submitBtn) return;
+
+        submitBtn.addEventListener('click', () => {
+          let score = 0;
+          playTone(500, 0.15);
+
+          // Q1 Grading (2 marks)
+          const q1Sel = document.querySelector('input[name="necta_q1"]:checked');
+          const q1MarkIcon = document.getElementById('q1-mark-icon');
+          const q1Remark = document.getElementById('q1-teacher-remark');
+
+          if (q1Sel && q1Sel.value === 'B') {
+            score += 2;
+            q1MarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M4 12l6 6L20 6"/></svg>`;
+            q1Remark.innerHTML = `✓ <em>Safi sana! RAM inapoteza data umeme ukizimwa (Volatile Memory). (+2 Alama)</em>`;
+          } else {
+            q1MarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M6 6l12 12M6 18L18 6"/></svg>`;
+            q1Remark.innerHTML = `✗ <em>Jibu sahihi ni (B) RAM. Hard Disk inatunza data hata umeme ukikatika. (0 Alama)</em>`;
+          }
+          q1Remark.classList.remove('hidden');
+
+          // Q2 Grading (4 marks)
+          const m1 = document.getElementById('match-q2-1').value;
+          const m2 = document.getElementById('match-q2-2').value;
+          const m3 = document.getElementById('match-q2-3').value;
+          const q2MarkIcon = document.getElementById('q2-mark-icon');
+          const q2Remark = document.getElementById('q2-teacher-remark');
+
+          let q2Score = 0;
+          if (m1 === 'RAM') q2Score += 1.5;
+          if (m2 === 'HDD') q2Score += 1.5;
+          if (m3 === 'SMPS') q2Score += 1;
+          score += q2Score;
+
+          if (q2Score >= 3.5) {
+            q2MarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M4 12l6 6L20 6"/></svg>`;
+            q2Remark.innerHTML = `✓ <em>Bora kabisa! Umeelewa analojia zote za maisha halisi (+${q2Score} Alama).</em>`;
+          } else {
+            q2MarkIcon.innerHTML = `<span class="text-red-600 font-bold">~ (${q2Score}/4)</span>`;
+            q2Remark.innerHTML = `✗ <em>Hakikisha (i)=RAM (meza), (ii)=Hard Disk (ghala), (iii)=SMPS (transfoma). (+${q2Score} Alama)</em>`;
+          }
+          q2Remark.classList.remove('hidden');
+
+          // Q3a & Q3b Grading (5 marks)
+          const ans3a = (document.getElementById('ans-q3a').value || '').toLowerCase();
+          const ans3b = (document.getElementById('ans-q3b').value || '').toLowerCase();
+          const q3aMarkIcon = document.getElementById('q3a-mark-icon');
+          const q3aRemark = document.getElementById('q3a-teacher-remark');
+          const q3bMarkIcon = document.getElementById('q3b-mark-icon');
+          const q3bRemark = document.getElementById('q3b-teacher-remark');
+
+          // 3a
+          if (ans3a.includes('bus')) {
+            score += 2.5;
+            q3aMarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M4 12l6 6L20 6"/></svg>`;
+            q3aRemark.innerHTML = `✓ <em>Vizuri! Bus Topology inatumia gharama ndogo ya kebo moja ya kati (+2.5 Alama).</em>`;
+          } else {
+            q3aMarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M6 6l12 12M6 18L18 6"/></svg>`;
+            q3aRemark.innerHTML = `✗ <em>Jibu sahihi ni Bus Topology (Topolojia ya Basi). (0 Alama)</em>`;
+          }
+          q3aRemark.classList.remove('hidden');
+
+          // 3b
+          if (ans3b.includes('fail') || ans3b.includes('stop') || ans3b.includes('break') || ans3b.includes('simama') || ans3b.includes('kufa') || ans3b.includes('zima') || ans3b.includes('kata') || ans3b.includes('haribika')) {
+            score += 2.5;
+            q3bMarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M4 12l6 6L20 6"/></svg>`;
+            q3bRemark.innerHTML = `✓ <em>Safi sana! Waya mkuu (backbone) ukikatika, mtandao mzima unasimama kufanya kazi (+2.5 Alama).</em>`;
+          } else {
+            q3bMarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M6 6l12 12M6 18L18 6"/></svg>`;
+            q3bRemark.innerHTML = `✗ <em>Kumbuka: Athari kuu ni kuwa mtandao wote utaacha kufanya kazi (Single point of failure).</em>`;
+          }
+          q3bRemark.classList.remove('hidden');
+
+          // Q4 Grading (4 marks)
+          const ans4 = (document.getElementById('ans-q4').value || '').toLowerCase();
+          const q4MarkIcon = document.getElementById('q4-mark-icon');
+          const q4Remark = document.getElementById('q4-teacher-remark');
+
+          if (ans4.includes('time') || ans4.includes('clock') || ans4.includes('date') || ans4.includes('bios') || ans4.includes('cmos') || ans4.includes('saa') || ans4.includes('tarehe')) {
+            score += 4;
+            q4MarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M4 12l6 6L20 6"/></svg>`;
+            q4Remark.innerHTML = `✓ <em>Hongera sana! Betri ya CMOS inatunza saa, tarehe, na mipangilio ya BIOS isifutike (+4 Alama).</em>`;
+          } else {
+            q4MarkIcon.innerHTML = `<svg class="w-5 h-5 red-pen-mark inline" viewBox="0 0 24 24"><path class="red-pen-anim" stroke-width="3" d="M6 6l12 12M6 18L18 6"/></svg>`;
+            q4Remark.innerHTML = `✗ <em>Jibu sahihi: Betri ya CMOS inatunza saa na tarehe halisi pamoja na mipangilio ya BIOS wakati kompyuta haina umeme.</em>`;
+          }
+          q4Remark.classList.remove('hidden');
+
+          // Calculate Total Grade
+          const scoreStamp = document.getElementById('necta-score-stamp');
+          const scoreVal = document.getElementById('final-score-val');
+          const gradeBadge = document.getElementById('final-grade-badge');
+
+          const finalRounded = Math.round(score);
+          scoreVal.textContent = `${finalRounded}/15`;
+
+          if (finalRounded >= 12) {
+            gradeBadge.textContent = '★ DARAJA A: NECTA Ready!';
+            gradeBadge.className = 'text-[10px] mt-0.5 font-bold text-center text-emerald-800';
+            playTone(980, 0.4);
+          } else if (finalRounded >= 8) {
+            gradeBadge.textContent = '★ DARAJA B: Umefaulu Vizuri!';
+            gradeBadge.className = 'text-[10px] mt-0.5 font-bold text-center text-blue-800';
+            playTone(750, 0.3);
+          } else {
+            gradeBadge.textContent = '★ DARAJA C: Rudia Maswali!';
+            gradeBadge.className = 'text-[10px] mt-0.5 font-bold text-center text-amber-800';
+            playTone(450, 0.3);
+          }
+
+          scoreStamp.classList.remove('hidden');
+        });
+
+        resetBtn.addEventListener('click', () => {
+          document.querySelectorAll('input[name="necta_q1"]').forEach(r => r.checked = false);
+          document.getElementById('match-q2-1').value = '';
+          document.getElementById('match-q2-2').value = '';
+          document.getElementById('match-q2-3').value = '';
+          document.getElementById('ans-q3a').value = '';
+          document.getElementById('ans-q3b').value = '';
+          document.getElementById('ans-q4').value = '';
+
+          ['q1', 'q2', 'q3a', 'q3b', 'q4'].forEach(id => {
+            const icon = document.getElementById(`${id}-mark-icon`);
+            const remark = document.getElementById(`${id}-teacher-remark`);
+            if (icon) icon.innerHTML = '';
+            if (remark) remark.classList.add('hidden');
+          });
+
+          document.getElementById('necta-score-stamp').classList.add('hidden');
+          playTone(400, 0.1);
+        });
+      }
+
+      // 7. Feature 4: "Mwalimu Voice + Synced Highlighter" (Zero-Bandwidth)
+      function stopMwalimuSpeech() {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        clearInterval(speechTimer);
+        currentPlayingPage = -1;
+        syncedHighlighter.classList.add('hidden');
+
+        document.querySelectorAll('.play-mwalimu-btn').forEach(btn => {
+          const icon = btn.querySelector('.play-icon');
+          const txt = btn.querySelector('.play-text');
+          if (icon) icon.textContent = '▶';
+          if (txt) txt.textContent = 'Sikiliza';
+        });
+
+        document.querySelectorAll('.audio-progress-bar').forEach(bar => bar.style.width = '0%');
+        document.querySelectorAll('.audio-time').forEach(t => t.textContent = '0:00');
+      }
+
+      function speakText(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 0.95;
+        utter.pitch = 1.0;
+        window.speechSynthesis.speak(utter);
+      }
+
+      function playMwalimuVoice(pageIdx) {
+        if (currentPlayingPage === pageIdx) {
+          stopMwalimuSpeech();
+          return;
+        }
+
+        stopMwalimuSpeech();
+        currentPlayingPage = pageIdx;
+
+        const scriptData = MWALIMU_SCRIPTS[pageIdx];
+        if (!scriptData) return;
+
+        const activeCard = document.getElementById(`audio-card-${pageIdx}`);
+        if (!activeCard) return;
+
+        const btn = activeCard.querySelector('.play-mwalimu-btn');
+        const icon = btn.querySelector('.play-icon');
+        const txt = btn.querySelector('.play-text');
+        const bar = activeCard.querySelector('.audio-progress-bar');
+        const timeEl = activeCard.querySelector('.audio-time');
+
+        if (icon) icon.textContent = '⏸';
+        if (txt) txt.textContent = 'Sitisha';
+
+        playTone(600, 0.12);
+
+        // Speech synthesis narration
+        if ('speechSynthesis' in window) {
+          const utter = new SpeechSynthesisUtterance(scriptData.text);
+          utter.rate = 0.96;
+          utter.pitch = 1.05;
+
+          // Attempt to find Swahili or East African English voice if present
+          const voices = window.speechSynthesis.getVoices();
+          const swVoice = voices.find(v => v.lang.includes('sw') || v.lang.includes('SW') || v.name.includes('Swahili'));
+          if (swVoice) utter.voice = swVoice;
+
+          utter.onend = () => stopMwalimuSpeech();
+          utter.onerror = () => stopMwalimuSpeech();
+          window.speechSynthesis.speak(utter);
+        }
+
+        // Timer for Synced Fluorescent Yellow Highlighter
+        speechElapsed = 0;
+        const totalDuration = scriptData.duration;
+
+        speechTimer = setInterval(() => {
+          speechElapsed += 0.5;
+
+          const pct = Math.min(100, (speechElapsed / totalDuration) * 100);
+          if (bar) bar.style.width = `${pct}%`;
+
+          const mins = Math.floor(speechElapsed / 60);
+          const secs = Math.floor(speechElapsed % 60);
+          if (timeEl) timeEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+
+          // Find which section matches the current timestamp
+          const curHighlight = scriptData.highlights.find(h => speechElapsed >= h.start && speechElapsed < h.end);
+          if (curHighlight) {
+            const pageEl = viewportEl.querySelector(`.notebook-page[data-page-index="${pageIdx}"]`);
+            if (pageEl) {
+              const target = pageEl.querySelector(curHighlight.target);
+              if (target) {
+                if (!pageEl.contains(syncedHighlighter)) pageEl.appendChild(syncedHighlighter);
+                const targetRect = target.getBoundingClientRect();
+                const pageRect = pageEl.getBoundingClientRect();
+
+                syncedHighlighter.style.left = `${targetRect.left - pageRect.left - 4}px`;
+                syncedHighlighter.style.top = `${targetRect.top - pageRect.top - 2}px`;
+                syncedHighlighter.style.width = `${targetRect.width + 8}px`;
+                syncedHighlighter.style.height = `${targetRect.height + 4}px`;
+                syncedHighlighter.classList.remove('hidden');
+              }
+            }
+          } else {
+            syncedHighlighter.classList.add('hidden');
+          }
+
+          if (speechElapsed >= totalDuration) {
+            stopMwalimuSpeech();
+          }
+        }, 500);
+      }
+
+      function setupMwalimuVoice() {
+        // Paperclip toggles audio card
+        document.addEventListener('click', (e) => {
+          const hanger = e.target.closest('.paperclip-hanger');
+          if (hanger) {
+            const pageIdx = parseInt(hanger.getAttribute('data-page-audio'), 10);
+            const card = document.getElementById(`audio-card-${pageIdx}`);
+            if (card) {
+              const wasHidden = card.classList.contains('hidden');
+              document.querySelectorAll('.mwalimu-audio-card').forEach(c => c.classList.add('hidden'));
+              if (wasHidden) {
+                card.classList.remove('hidden');
+                playTone(680, 0.08);
+              }
+            }
+            return;
+          }
+
+          const playBtn = e.target.closest('.play-mwalimu-btn');
+          if (playBtn) {
+            const pageIdx = parseInt(playBtn.getAttribute('data-page'), 10);
+            playMwalimuVoice(pageIdx);
+          }
+        });
+      }
+
+      // 8. Edit Text Mode Toggle
+      function syncEditableState() {
+        const regions = viewportEl.querySelectorAll('.editable-region');
+        regions.forEach((el) => {
+          el.setAttribute('contenteditable', isEditMode ? 'true' : 'false');
+        });
+
+        if (isEditMode) {
+          document.body.classList.add('editing-active');
+          editBtnLabel.textContent = 'Done';
+          toggleEditBtn.classList.replace('bg-zinc-800', 'bg-emerald-950/90');
+          toggleEditBtn.classList.replace('border-zinc-700', 'border-emerald-500/60');
+          sketchDrawer.classList.remove('hidden');
+          const activeBody = viewportEl.querySelector('.page-active .page-body');
+          if (activeBody) activeBody.focus();
+        } else {
+          document.body.classList.remove('editing-active');
+          editBtnLabel.textContent = 'Edit';
+          toggleEditBtn.classList.replace('bg-emerald-950/90', 'bg-zinc-800');
+          toggleEditBtn.classList.replace('border-emerald-500/60', 'border-zinc-700');
+          sketchDrawer.classList.add('hidden');
+        }
+      }
+
+      toggleEditBtn.addEventListener('click', () => {
+        isEditMode = !isEditMode;
+        syncEditableState();
+      });
+
+      addStampBtn.addEventListener('click', () => {
+        const activeBody = viewportEl.querySelector('.page-active .page-body');
+        if (!activeBody) return;
+
+        const block = document.createElement('div');
+        block.className = 'hw-section';
+        block.innerHTML = `
+          <p class="ink-line"><span class="ink-black">• </span><span class="ink-black ink-underline">New Study Note Heading :</span></p>
+          <p class="ink-line pl-5">Write your custom ballpoint notes directly on these lines.</p>
+          <p class="ink-line pl-5"><span class="ink-black ink-underline">Example</span><span class="ink-black"> :</span> Key concept 1, Key concept 2.</p>
+        `;
+        activeBody.appendChild(block);
+        applyHumanJitter(block);
+      });
+
+      // 9. Ink Color & Lighting Slider
+      inkColorBtn.addEventListener('click', () => {
+        inkThemeIndex = (inkThemeIndex + 1) % inkThemes.length;
+        const theme = inkThemes[inkThemeIndex];
+        document.documentElement.style.setProperty('--ink-blue', theme.body);
+        document.documentElement.style.setProperty('--ink-black', theme.heading);
+        inkSwatch.style.backgroundColor = theme.swatch;
+        inkLabel.textContent = theme.name;
+        playTone(520, 0.08);
+      });
+
+      lightingSlider.addEventListener('input', (e) => {
+        const val = (Number(e.target.value) / 100).toFixed(2);
+        document.documentElement.style.setProperty('--lighting-opacity', val);
+      });
+
+      // 10. Add New Blank Ruled Page
+      addPageBtn.addEventListener('click', () => {
+        const pages = viewportEl.querySelectorAll('.notebook-page');
+        const newIndex = pages.length;
+        const pageNumStr = String(newIndex + 1).padStart(2, '0');
+
+        const newPage = document.createElement('article');
+        newPage.className = 'notebook-page page-stacked-right';
+        newPage.setAttribute('data-page-index', String(newIndex));
+
+        newPage.innerHTML = `
+          <div class="paper-grain"></div>
+          <div class="lighting-overlay"></div>
+
+          <div class="page-header">
+            <h1 class="page-main-title editable-region" spellcheck="false">
+              Custom Study Notes &nbsp;(Part - ${newIndex + 1})
+            </h1>
+            <div class="vidyalekhan-stamp">
+              <div class="flex items-center gap-1">
+                <span class="font-serif font-bold text-[14.5px] tracking-[0.14em] leading-none">MANOLO</span>
+                <svg class="w-4 h-4 stroke-[#c64b65] fill-none" viewBox="0 0 24 24" stroke-width="1.8">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                </svg>
+              </div>
+              <div class="text-[8.5px] font-sans tracking-wider leading-[11px] mt-0.5 text-[#c64b65]/90">
+                <div>DATE <span class="inline-block w-14 border-b border-[#c64b65]/60"></span></div>
+                <div>PAGE <span class="inline-block w-14 border-b border-[#c64b65]/60 text-center font-mono">${pageNumStr}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="page-body editable-region" spellcheck="false">
+            <div class="hw-section">
+              <p class="ink-line">
+                <span class="margin-num">${newIndex + 7})</span>
+                <span class="ink-black ink-underline">Custom Chapter Notes & Summary :</span>
+              </p>
+              <p class="ink-line pl-5">Start typing directly on this page to create your own</p>
+              <p class="ink-line">handwritten notebook sheet with realistic ballpoint ink.</p>
+            </div>
+          </div>
+
+          <div class="page-footer-watermark">
+            <span>★ festomanolo.com</span>
+          </div>
+        `;
+
+        viewportEl.appendChild(newPage);
+        applyHumanJitter(newPage);
+
+        currentPage = newIndex;
+        isEditMode = true;
+        updatePagesUI();
+        syncEditableState();
+      });
+
+      // Initial Setup & Boot
+      setupTapToTranslate();
+      setupMotherboardHotspots();
+      setupNectaGrading();
+      setupMwalimuVoice();
+      applyHumanJitter();
+      updatePagesUI();
+      updateResponsiveScale();
+
+      // Preload voices if available in browser
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    })();
+  </script>
+</body>
+</html>
