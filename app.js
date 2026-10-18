@@ -136,7 +136,7 @@ function toc(f) {
     }
     sheet.append(h('button', { class: 'row', onclick: () => riffle(f, pgs.findIndex(x => x.u === u && x.kind === 'cp')) }, h('span', { class: 'tick' }, S.quiz[u.id] >= .6 ? '✔' : ''), '📝 Checkpoint', h('span', { class: 'dots' }), 'test'));
   }
-  scene(sheet, h('button', { onclick: () => go(`#/cs/${f}`) }, '← Close notebook'));
+  scene(spread(sheet), h('button', { onclick: () => go(`#/cs/${f}`) }, '← Close notebook'));
   sheet.focus?.();
 }
 function riffle(f, n) {
