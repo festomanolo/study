@@ -87,6 +87,7 @@ function bag() {
   let p = 0;
   const books = h('div', { class: 'books' },
     h('button', { class: 'book', style: 'background:#244a9a', disabled: true, onclick: open }, 'Computer Science'),
+    h('button', { class: 'book', style: 'background:#1b387b;--ty:0px', onclick: () => go('#/hardware') }, 'Hardware · Vifaa'),
     ...['Physics', 'Maths', 'Biology'].map((s, i) => h('button', { class: 'book soon', disabled: true, 'aria-label': s + ' coming soon', style: `background:${['#1b7f5a', '#7a3fa0', '#a06a1b'][i]}` }, s + ' · Soon')));
   const csBtn = books.firstChild;
   const pull = h('div', { class: 'pull', role: 'slider', tabindex: 0, 'aria-label': 'Zipper', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': 0 });
