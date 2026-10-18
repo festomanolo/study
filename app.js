@@ -214,7 +214,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
     const mine = h('p', { contenteditable: true, 'aria-label': 'My notes', style: 'border-top:1px dashed #888;min-height:var(--line)', oninput: e => notePut(t.id, e.target.textContent) });
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
-    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
+    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
   } else if (type === 'hook') {
     sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes[0].replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
   } else if (type === 'glossary') {
