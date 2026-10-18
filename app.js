@@ -1,14 +1,17 @@
 import { forms, codeQs } from './content.js';
 import { run, runSync, fmt } from './interp.js';
 import { bespoke } from './labs.js';
+import { DIAGRAMS } from './diagrams.js';
+import { makeDiagram } from './notebook.js';
 const $ = document.getElementById('app'), live = document.getElementById('live');
 const h = (t, a = {}, ...k) => { const e = document.createElement(t); for (const [n, v] of Object.entries(a)) n.startsWith('on') ? e.addEventListener(n.slice(2), v) : n === 'class' ? e.className = v : v !== false && e.setAttribute(n, v === true ? '' : v); for (const c of k.flat()) if (c != null) e.append(c); return e; };
 const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m, 30); };
 
 // ---- store (versioned) ----
-const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9 }, page: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
+const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9, ink: 0, light: 88 }, page: {}, edits: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
 let S; try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+const INKS = [['#1b387b', '#1e232a', 'Bic Blue'], ['#23272e', '#0f172a', 'Gel Black'], ['#2e1f6e', '#1c1917', 'Indigo']];
 function applySettings() {
   const r = document.documentElement;
   const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
@@ -16,8 +19,10 @@ function applySettings() {
   r.classList.toggle('low', low);
   r.classList.toggle('reduce', S.set.reduce || matchMedia('(prefers-reduced-motion: reduce)').matches || low);
   r.classList.toggle('readable', S.set.readable); r.style.setProperty('--fs', S.set.fs);
+  const ink = INKS[S.set.ink] || INKS[0]; r.style.setProperty('--ink', ink[0]); r.style.setProperty('--ink-black', ink[1]); r.style.setProperty('--lighting', S.set.light / 100);
   r.style.setProperty('--line', Math.round(28 * S.set.fs) + 'px');
 }
+const spread = (sheet, clip) => h('div', { class: 'spread' }, h('div', { class: 'glimpse' }), h('div', { class: 'pages' }, sheet, clip || null, h('div', { class: 'grain' }), h('div', { class: 'light' }), h('div', { class: 'stampbrand' }, 'MANOLO'), h('div', { class: 'mark' }, 'festomanolo.com')));
 const reduced = () => document.documentElement.classList.contains('reduce');
 
 // ---- audio: synthetic chimes (0 KB) ----
@@ -32,11 +37,14 @@ const noteGet = async id => { const d = await idb; if (!d) return S.mine?.[id] |
 const notePut = async (id, v) => { const d = await idb; if (!d) { (S.mine ||= {})[id] = v; return save(); } d.transaction('notes', 'readwrite').objectStore('notes').put(v, id); };
 
 // ---- model ----
+// Split long notes at "## " headings so each page holds about one screen of text.
+const noteParts = t => { const parts = []; let n = 0; for (const e of t.notes) { const len = e.length; if (e.startsWith('## ') && n > 700) { parts.push(1); n = 0; } n += len; } parts.push(1); return parts.map((_, i) => i ? 'notes' + i : 'notes'); };
+const noteChunk = (t, i) => { const out = [[]]; let n = 0; for (const e of t.notes) { if (e.startsWith('## ') && n > 700) { out.push([]); n = 0; } out.at(-1).push(e); n += e.length; } return out[i] || []; };
 const form = f => forms[f];
 function pagesOf(f) {
   const out = [];
   for (const u of form(f).units) {
-    for (const t of u.topics) for (const type of ['hook', 'notes', 'glossary', 'lab', ...(t.lab2 ? ['lab2'] : []), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
+    for (const t of u.topics) for (const type of [...noteParts(t), 'glossary', 'lab', ...(t.lab2 ? ['lab2'] : []), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
     out.push({ kind: 'cp', u, id: 'cp.' + u.id });
   }
   return out;
@@ -57,6 +65,7 @@ function route() {
     if (p[2] === 'p') return pageScene(p[1], +p[3] || 0);
     return cover(p[1]);
   }
+  if (p[0] === 'hardware') return hardware();
   if (p[0] === 'demo') return demo();
   bag();
 }
@@ -78,6 +87,7 @@ function bag() {
   let p = 0;
   const books = h('div', { class: 'books' },
     h('button', { class: 'book', style: 'background:#244a9a', disabled: true, onclick: open }, 'Computer Science'),
+    h('button', { class: 'book', style: 'background:#1b387b;--ty:0px', onclick: () => go('#/hardware') }, 'Hardware · Vifaa'),
     ...['Physics', 'Maths', 'Biology'].map((s, i) => h('button', { class: 'book soon', disabled: true, 'aria-label': s + ' coming soon', style: `background:${['#1b7f5a', '#7a3fa0', '#a06a1b'][i]}` }, s + ' · Soon')));
   const csBtn = books.firstChild;
   const pull = h('div', { class: 'pull', role: 'slider', tabindex: 0, 'aria-label': 'Zipper', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': 0 });
@@ -94,6 +104,11 @@ function bag() {
   const lv = h('div', { class: 'tag' }, ...['f1', 'f2'].map(f => h('button', { class: f === level ? 'on' : '', onclick: () => { level = f; lv.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', ['f1', 'f2'][i] === level)); } }, form(f).title)));
   const cont = S.last.f ? h('button', { class: 'pri', onclick: () => go(`#/cs/${S.last.f}/p/${S.last.n}`) }, 'Continue where you left off') : null;
   scene(h('h1', { style: 'margin:0;font-family:var(--hand)' }, 'MANOLO Backpack'), lv, bagEl, h('button', { onclick: () => set(p > .5 ? 0 : 1) }, 'Zip / Unzip (button)'), cont, h('small', {}, 'Drag the zipper, then pick a notebook. Buruta zipu kisha chagua daftari.'));
+}
+
+// ---- original hardware notebook (legacy), embedded with its simulators ----
+function hardware() {
+  scene(h('iframe', { class: 'legacy', src: 'legacy/handwritten_notebook_web_app.html', title: 'Hardware notebook' }), h('button', { onclick: () => go('#/bag') }, '🎒 Back to bag'));
 }
 
 // ---- cover ----
@@ -121,7 +136,7 @@ function toc(f) {
     }
     sheet.append(h('button', { class: 'row', onclick: () => riffle(f, pgs.findIndex(x => x.u === u && x.kind === 'cp')) }, h('span', { class: 'tick' }, S.quiz[u.id] >= .6 ? '✔' : ''), '📝 Checkpoint', h('span', { class: 'dots' }), 'test'));
   }
-  scene(sheet, h('button', { onclick: () => go(`#/cs/${f}`) }, '← Close notebook'));
+  scene(spread(sheet), h('button', { onclick: () => go(`#/cs/${f}`) }, '← Close notebook'));
   sheet.focus?.();
 }
 function riffle(f, n) {
@@ -140,22 +155,68 @@ function pageScene(f, n, ghost = false) {
   if (pg.kind === 'cp') checkpoint(sheet, pg.u);
   else renderPage(sheet, pg, pencil);
   sheet.append(pencil);
-  const nav = h('div', { class: 'nav' }, h('button', { onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents' }, '☰'), h('button', { disabled: n === 0, onclick: () => go(`#/cs/${f}/p/${n - 1}`), 'aria-label': 'Previous page' }, '◀'), h('span', { class: 'pg' }, `${n + 1} / ${pgs.length}`), h('button', { disabled: n === pgs.length - 1, onclick: () => go(`#/cs/${f}/p/${n + 1}`), 'aria-label': 'Next page' }, '▶'), h('button', { onclick: () => go('#/bag') }, '🎒'));
-  scene(sheet, nav);
-  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => removeEventListener('keydown', key); }
+  const dg = sheet._dg, tray = h('div', { class: 'tray', hidden: true }), hud = h('div', { class: 'hud2', hidden: true, role: 'status' });
+  const topicFirst = pg.t ? pgs.findIndex(x => x.t === pg.t) : -1, want = pg.t && DIAGRAMS[pg.t.id];
+  const withDiagram = what => () => { if (!want) return; if (dg) { what === 'sim' ? dg.sim(hud) : dg.recalling ? dg.stopRecall() : dg.recall(tray); } else { try { sessionStorage.setItem('manolo.pending', what); } catch {} go(`#/cs/${f}/p/${topicFirst}`); } };
+  let talking = false; const stopTalk = () => { talking = false; try { speechSynthesis.cancel(); } catch {} sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
+  const talk = () => {
+    if (talking) return stopTalk(); if (!('speechSynthesis' in window)) return say('Speech is not available on this device.');
+    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on'); speechSynthesis.cancel();
+    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); const m = new SpeechSynthesisUtterance(b.textContent.replace(/✏️?/g, '')); m.rate = S.set.rate; m.onend = next; m.onerror = stopTalk; speechSynthesis.speak(m); };
+    next();
+  };
+  const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
+  const clip = h('button', { class: 'clip', onclick: talk, title: 'Tap to hear Mwalimu', 'aria-label': 'Hear Mwalimu' }, h('span', {}, '📎'));
+  const editable = type => type.startsWith('notes'), blocksOf = () => [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > ul > li')];
+  const saved = S.edits[pg.id]; if (saved) blocksOf().forEach((b, k) => { if (saved[k] != null) b.textContent = saved[k]; });
+  let editing = false; const edit = h('button', { onclick: () => { editing = !editing; sheet.classList.toggle('editing', editing); edit.classList.toggle('on', editing); blocksOf().forEach((b, k) => { b.contentEditable = editing; b.oninput = () => { (S.edits[pg.id] ||= {})[k] = b.textContent; save(); }; }); say(editing ? 'Edit mode on: tap any line and type.' : 'Edit mode off.'); }, disabled: !editable(pg.type || '') }, h('i', { class: 'dot' }), 'Edit');
+  const inkBtn = h('button', { onclick: () => { S.set.ink = (S.set.ink + 1) % INKS.length; save(); applySettings(); inkBtn.lastChild.textContent = INKS[S.set.ink][2]; } }, h('i', { class: 'sw' }), h('span', {}, INKS[S.set.ink][2]));
+  const light = h('input', { type: 'range', min: 0, max: 100, value: S.set.light, 'aria-label': 'Lighting', oninput: e => { S.set.light = +e.target.value; applySettings(); }, onchange: save });
+  const nav = h('nav', { class: 'pill' },
+    h('button', { onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents' }, '☰'), h('button', { disabled: n === 0, onclick: () => go(`#/cs/${f}/p/${n - 1}`), 'aria-label': 'Previous page' }, '←'), h('span', { class: 'pg' }, `Page ${n + 1} / ${pgs.length}`), h('button', { disabled: n === pgs.length - 1, onclick: () => go(`#/cs/${f}/p/${n + 1}`), 'aria-label': 'Next page' }, '→'),
+    h('i', { class: 'sep' }),
+    h('button', { class: S.set.sw ? 'on' : '', onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }, '🇹🇿 Fafanua'),
+    h('button', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }, '⚡ Data Flow'),
+    h('button', { onclick: withDiagram('recall'), disabled: !want, title: 'Hide the labels and put them back' }, '🧩 Active Recall'),
+    voice, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
+    h('button', { onclick: () => go('#/bag'), 'aria-label': 'Backpack' }, '🎒'));
+
+  scene(spread(sheet, clip), tray, hud, nav);
+  applyJitter(sheet);
+  if (dg && !ghost) { let p; try { p = sessionStorage.getItem('manolo.pending'); sessionStorage.removeItem('manolo.pending'); } catch {} if (p) setTimeout(() => p === 'sim' ? dg.sim(hud) : dg.recall(tray), 350); }
+  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); dg?.destroy(); stopTalk(); }; }
+}
+function diagramBlock(sheet, t, pencil) {
+  const dg = makeDiagram(DIAGRAMS[t.id], { chime, say, onInfo: (label, info) => { pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + label), h('br'), info); } });
+  sheet._dg = dg; return h('figure', { class: 'diagram' }, dg.el, h('figcaption', {}, 'Tap any part · Bofya sehemu'));
+}
+// Handwriting wobble: each line sits a hair off the ruling, like real ink.
+function applyJitter(sheet) { sheet.querySelectorAll(':scope > p, :scope > h3, :scope > ul > li').forEach((b, i) => { const k = ((i * 9301 + 49297) % 233280) / 233280 - .5; b.style.setProperty('--jy', (k * 1.1).toFixed(2) + 'px'); b.style.setProperty('--jr', (k * .28).toFixed(2) + 'deg'); }); }
+function block(n, rich) {
+  if (n.startsWith('## ')) return h('h3', { class: 'ink-head' }, n.slice(3));
+  if (n.startsWith('```')) { const m = n.match(/^```(\w*)\n([\s\S]*?)\n?```$/), code = m ? m[2] : n, out = h('pre', { class: 'out', hidden: true });
+    const box = h('div', { class: 'codeblock' }, h('pre', { class: 'code' }, code));
+    if (m && m[1] === 'py') box.append(h('button', { onclick: () => { const sample = /int\(input/.test(code) ? '72' : 'Amina', r = runSync(code, [sample]); out.hidden = false; out.replaceChildren(/input\(/.test(code) ? `(sample input: ${sample})\n` : '', r.error ? h('span', { class: 'e' }, `${r.error.kind} (line ${r.error.line}): ${r.error.msg.en}`) : r.out || '(no output)'); chime(660, .05); } }, '▶ Run'), out); return box; }
+  if (n.startsWith('- ')) return h('ul', {}, n.split('\n').map(l => h('li', {}, rich(l.replace(/^- /, '')))));
+  const cls = /^(Remember|Example|Try|Rules?):/.test(n) ? n.split(':')[0].toLowerCase() : '';
+  return h('p', cls ? { class: 'callout ' + cls } : {}, rich(n));
 }
 function renderPage(sheet, { type, t, u }, pencil) {
   sheet.append(h('span', { class: 'code-tag' }, t.code), h('h2', {}, t.title + (S.set.sw ? ` · ${t.sw}` : '')));
   const term = k => { const d = t.terms[k.toLowerCase()]; return h('button', { class: 'term', onclick: () => { if (!S.set.sw) return; pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + k + ' = ' + d[0]), h('br'), d[1], h('br'), h('i', {}, 'NECTA: ' + d[2])); chime(520, .05); } }, k); };
   const rich = s => s.split(/(\[\[.+?\]\]|`.+?`)/).map(x => x.startsWith('[[') ? term(x.slice(2, -2)) : x.startsWith('`') ? h('span', { class: 'code' }, x.slice(1, -1)) : x);
-  if (type === 'notes') {
-    t.notes.forEach(n => sheet.append(h('p', {}, rich(n))));
+  if (type.startsWith('notes')) {
+    const part = +type.slice(5) || 0, total = noteParts(t).length;
+    if (part === 0 && t.hook) sheet.append(h('p', { class: 'callout try' }, `Think: ${t.hook}`));
+    noteChunk(t, part).forEach((n, i) => { sheet.append(block(n, rich)); if (part === 0 && i === 0 && DIAGRAMS[t.id]) sheet.append(diagramBlock(sheet, t, pencil)); });
+    if (total > 1) sheet.append(h('small', {}, `Notes ${part + 1}/${total}`));
+    if (part < total - 1) return;
     const mine = h('p', { contenteditable: true, 'aria-label': 'My notes', style: 'border-top:1px dashed #888;min-height:var(--line)', oninput: e => notePut(t.id, e.target.textContent) });
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
-    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
+    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
   } else if (type === 'hook') {
-    sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes[0].replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
+    sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes.find(n => !/^(##|-|```)/.test(n)).replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
   } else if (type === 'glossary') {
     sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)));
   } else if (type === 'recall') {
@@ -170,15 +231,18 @@ function renderPage(sheet, { type, t, u }, pencil) {
 }
 
 // ---- quiz & red pen ----
+const redMark = good => { const e = h('span', { class: 'redpen ' + (good ? 'ok' : 'no'), 'aria-label': good ? 'correct' : 'wrong' }); e.innerHTML = `<svg viewBox="0 0 24 24"><path d="${good ? 'M4 12l6 6L20 6' : 'M6 6l12 12M6 18L18 6'}"/></svg>`; return e; };
 function quiz(host, id, qs, extra) {
   const form_ = h('div', {}), res = h('div', { 'aria-live': 'polite' });
   qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
   host.append(form_, h('button', { class: 'pri', onclick: () => {
     let ok = 0;
-    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(h('span', { class: good ? 'ok' : 'no' }, good ? ' ✔' : ` ✘ → ${o[a]}`)); });
-    S.quiz[id] = Math.max(S.quiz[id] || 0, ok / qs.length); save(); res.replaceChildren(h('span', { class: 'score' }, `${ok}/${qs.length}`)); chime(ok === qs.length ? 880 : 300, .2); say(`Score ${ok} of ${qs.length}`);
-    extra?.(ok / qs.length);
-  } }, 'Check / Kagua'), res);
+    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(redMark(!!good), good ? '' : h('span', { class: 'no pen-fix' }, ` → ${o[a]}`)); });
+    S.quiz[id] = Math.max(S.quiz[id] || 0, ok / qs.length); save();
+    const r = ok / qs.length; res.replaceChildren(h('span', { class: 'score' }, `${ok}/${qs.length}`), h('div', { class: 'teacher' }, r === 1 ? 'Excellent! Hongera sana!' : r >= .6 ? 'Good. Revise the red ones. Sawa.' : 'Revise the notes and try again. Jaribu tena.'));
+    chime(ok === qs.length ? 880 : 300, .2); say(`Score ${ok} of ${qs.length}`);
+    extra?.(r);
+  } }, 'Check / Kagua'), h('button', { onclick: () => { form_.querySelectorAll('input').forEach(i => i.checked = false); form_.querySelectorAll('[id^="' + id + 'r"]').forEach(x => x.replaceChildren()); res.replaceChildren(); } }, '🔄 Futa / Jaribu tena'), res);
 }
 function checkpoint(sheet, u) {
   sheet.append(h('h2', {}, `Checkpoint — ${u.title}`), h('p', {}, h('small', {}, 'Practice material in NECTA style. Not an official paper.')));
