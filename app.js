@@ -205,8 +205,12 @@ function renderPage(sheet, { type, t, u }, pencil) {
   sheet.append(h('span', { class: 'code-tag' }, t.code), h('h2', {}, t.title + (S.set.sw ? ` · ${t.sw}` : '')));
   const term = k => { const d = t.terms[k.toLowerCase()]; return h('button', { class: 'term', onclick: () => { if (!S.set.sw) return; pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + k + ' = ' + d[0]), h('br'), d[1], h('br'), h('i', {}, 'NECTA: ' + d[2])); chime(520, .05); } }, k); };
   const rich = s => s.split(/(\[\[.+?\]\]|`.+?`)/).map(x => x.startsWith('[[') ? term(x.slice(2, -2)) : x.startsWith('`') ? h('span', { class: 'code' }, x.slice(1, -1)) : x);
-  if (type === 'notes') {
-    t.notes.forEach(n => sheet.append(h('p', {}, rich(n))));
+  if (type.startsWith('notes')) {
+    const part = +type.slice(5) || 0, total = noteParts(t).length;
+    if (part === 0 && t.hook) sheet.append(h('p', { class: 'callout try' }, `Think: ${t.hook}`));
+    noteChunk(t, part).forEach((n, i) => { sheet.append(block(n, rich)); if (part === 0 && i === 0 && DIAGRAMS[t.id]) sheet.append(diagramBlock(sheet, t, pencil)); });
+    if (total > 1) sheet.append(h('small', {}, `Notes ${part + 1}/${total}`));
+    if (part < total - 1) return;
     const mine = h('p', { contenteditable: true, 'aria-label': 'My notes', style: 'border-top:1px dashed #888;min-height:var(--line)', oninput: e => notePut(t.id, e.target.textContent) });
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
