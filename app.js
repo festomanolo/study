@@ -19,6 +19,7 @@ function applySettings() {
   r.classList.toggle('low', low);
   r.classList.toggle('reduce', S.set.reduce || matchMedia('(prefers-reduced-motion: reduce)').matches || low);
   r.classList.toggle('readable', S.set.readable); r.style.setProperty('--fs', S.set.fs);
+  const ink = INKS[S.set.ink] || INKS[0]; r.style.setProperty('--ink', ink[0]); r.style.setProperty('--ink-black', ink[1]); r.style.setProperty('--lighting', S.set.light / 100);
   r.style.setProperty('--line', Math.round(28 * S.set.fs) + 'px');
 }
 const reduced = () => document.documentElement.classList.contains('reduce');
