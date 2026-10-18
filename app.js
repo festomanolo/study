@@ -106,6 +106,11 @@ function bag() {
   scene(h('h1', { style: 'margin:0;font-family:var(--hand)' }, 'MANOLO Backpack'), lv, bagEl, h('button', { onclick: () => set(p > .5 ? 0 : 1) }, 'Zip / Unzip (button)'), cont, h('small', {}, 'Drag the zipper, then pick a notebook. Buruta zipu kisha chagua daftari.'));
 }
 
+// ---- original hardware notebook (legacy), embedded with its simulators ----
+function hardware() {
+  scene(h('iframe', { class: 'legacy', src: 'legacy/handwritten_notebook_web_app.html', title: 'Hardware notebook' }), h('button', { onclick: () => go('#/bag') }, '🎒 Back to bag'));
+}
+
 // ---- cover ----
 function cover(f) {
   let r = 0, dragging = false, x0 = 0;
