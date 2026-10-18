@@ -65,6 +65,7 @@ function route() {
     if (p[2] === 'p') return pageScene(p[1], +p[3] || 0);
     return cover(p[1]);
   }
+  if (p[0] === 'hardware') return hardware();
   if (p[0] === 'demo') return demo();
   bag();
 }
