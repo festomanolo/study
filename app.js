@@ -22,6 +22,7 @@ function applySettings() {
   const ink = INKS[S.set.ink] || INKS[0]; r.style.setProperty('--ink', ink[0]); r.style.setProperty('--ink-black', ink[1]); r.style.setProperty('--lighting', S.set.light / 100);
   r.style.setProperty('--line', Math.round(28 * S.set.fs) + 'px');
 }
+const spread = (sheet, clip) => h('div', { class: 'spread' }, h('div', { class: 'glimpse' }), h('div', { class: 'pages' }, sheet, clip || null, h('div', { class: 'grain' }), h('div', { class: 'light' }), h('div', { class: 'stampbrand' }, 'MANOLO'), h('div', { class: 'mark' }, 'festomanolo.com')));
 const reduced = () => document.documentElement.classList.contains('reduce');
 
 // ---- audio: synthetic chimes (0 KB) ----
