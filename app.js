@@ -216,7 +216,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
     if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
   } else if (type === 'hook') {
-    sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes[0].replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
+    sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes.find(n => !/^(##|-|```)/.test(n)).replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
   } else if (type === 'glossary') {
     sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)));
   } else if (type === 'recall') {
