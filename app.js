@@ -155,9 +155,51 @@ function pageScene(f, n, ghost = false) {
   if (pg.kind === 'cp') checkpoint(sheet, pg.u);
   else renderPage(sheet, pg, pencil);
   sheet.append(pencil);
-  const nav = h('div', { class: 'nav' }, h('button', { onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents' }, '☰'), h('button', { disabled: n === 0, onclick: () => go(`#/cs/${f}/p/${n - 1}`), 'aria-label': 'Previous page' }, '◀'), h('span', { class: 'pg' }, `${n + 1} / ${pgs.length}`), h('button', { disabled: n === pgs.length - 1, onclick: () => go(`#/cs/${f}/p/${n + 1}`), 'aria-label': 'Next page' }, '▶'), h('button', { onclick: () => go('#/bag') }, '🎒'));
-  scene(sheet, nav);
-  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => removeEventListener('keydown', key); }
+  const dg = sheet._dg, tray = h('div', { class: 'tray', hidden: true }), hud = h('div', { class: 'hud2', hidden: true, role: 'status' });
+  const topicFirst = pg.t ? pgs.findIndex(x => x.t === pg.t) : -1, want = pg.t && DIAGRAMS[pg.t.id];
+  const withDiagram = what => () => { if (!want) return; if (dg) { what === 'sim' ? dg.sim(hud) : dg.recalling ? dg.stopRecall() : dg.recall(tray); } else { try { sessionStorage.setItem('manolo.pending', what); } catch {} go(`#/cs/${f}/p/${topicFirst}`); } };
+  let talking = false; const stopTalk = () => { talking = false; try { speechSynthesis.cancel(); } catch {} sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
+  const talk = () => {
+    if (talking) return stopTalk(); if (!('speechSynthesis' in window)) return say('Speech is not available on this device.');
+    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on'); speechSynthesis.cancel();
+    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); const m = new SpeechSynthesisUtterance(b.textContent.replace(/✏️?/g, '')); m.rate = S.set.rate; m.onend = next; m.onerror = stopTalk; speechSynthesis.speak(m); };
+    next();
+  };
+  const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
+  const clip = h('button', { class: 'clip', onclick: talk, title: 'Tap to hear Mwalimu', 'aria-label': 'Hear Mwalimu' }, h('span', {}, '📎'));
+  const editable = type => type.startsWith('notes'), blocksOf = () => [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > ul > li')];
+  const saved = S.edits[pg.id]; if (saved) blocksOf().forEach((b, k) => { if (saved[k] != null) b.textContent = saved[k]; });
+  let editing = false; const edit = h('button', { onclick: () => { editing = !editing; sheet.classList.toggle('editing', editing); edit.classList.toggle('on', editing); blocksOf().forEach((b, k) => { b.contentEditable = editing; b.oninput = () => { (S.edits[pg.id] ||= {})[k] = b.textContent; save(); }; }); say(editing ? 'Edit mode on: tap any line and type.' : 'Edit mode off.'); }, disabled: !editable(pg.type || '') }, h('i', { class: 'dot' }), 'Edit');
+  const inkBtn = h('button', { onclick: () => { S.set.ink = (S.set.ink + 1) % INKS.length; save(); applySettings(); inkBtn.lastChild.textContent = INKS[S.set.ink][2]; } }, h('i', { class: 'sw' }), h('span', {}, INKS[S.set.ink][2]));
+  const light = h('input', { type: 'range', min: 0, max: 100, value: S.set.light, 'aria-label': 'Lighting', oninput: e => { S.set.light = +e.target.value; applySettings(); }, onchange: save });
+  const nav = h('nav', { class: 'pill' },
+    h('button', { onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents' }, '☰'), h('button', { disabled: n === 0, onclick: () => go(`#/cs/${f}/p/${n - 1}`), 'aria-label': 'Previous page' }, '←'), h('span', { class: 'pg' }, `Page ${n + 1} / ${pgs.length}`), h('button', { disabled: n === pgs.length - 1, onclick: () => go(`#/cs/${f}/p/${n + 1}`), 'aria-label': 'Next page' }, '→'),
+    h('i', { class: 'sep' }),
+    h('button', { class: S.set.sw ? 'on' : '', onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }, '🇹🇿 Fafanua'),
+    h('button', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }, '⚡ Data Flow'),
+    h('button', { onclick: withDiagram('recall'), disabled: !want, title: 'Hide the labels and put them back' }, '🧩 Active Recall'),
+    voice, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
+    h('button', { onclick: () => go('#/bag'), 'aria-label': 'Backpack' }, '🎒'));
+
+  scene(spread(sheet, clip), tray, hud, nav);
+  applyJitter(sheet);
+  if (dg && !ghost) { let p; try { p = sessionStorage.getItem('manolo.pending'); sessionStorage.removeItem('manolo.pending'); } catch {} if (p) setTimeout(() => p === 'sim' ? dg.sim(hud) : dg.recall(tray), 350); }
+  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); dg?.destroy(); stopTalk(); }; }
+}
+function diagramBlock(sheet, t, pencil) {
+  const dg = makeDiagram(DIAGRAMS[t.id], { chime, say, onInfo: (label, info) => { pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + label), h('br'), info); } });
+  sheet._dg = dg; return h('figure', { class: 'diagram' }, dg.el, h('figcaption', {}, 'Tap any part · Bofya sehemu'));
+}
+// Handwriting wobble: each line sits a hair off the ruling, like real ink.
+function applyJitter(sheet) { sheet.querySelectorAll(':scope > p, :scope > h3, :scope > ul > li').forEach((b, i) => { const k = ((i * 9301 + 49297) % 233280) / 233280 - .5; b.style.setProperty('--jy', (k * 1.1).toFixed(2) + 'px'); b.style.setProperty('--jr', (k * .28).toFixed(2) + 'deg'); }); }
+function block(n, rich) {
+  if (n.startsWith('## ')) return h('h3', { class: 'ink-head' }, n.slice(3));
+  if (n.startsWith('```')) { const m = n.match(/^```(\w*)\n([\s\S]*?)\n?```$/), code = m ? m[2] : n, out = h('pre', { class: 'out', hidden: true });
+    const box = h('div', { class: 'codeblock' }, h('pre', { class: 'code' }, code));
+    if (m && m[1] === 'py') box.append(h('button', { onclick: () => { const sample = /int\(input/.test(code) ? '72' : 'Amina', r = runSync(code, [sample]); out.hidden = false; out.replaceChildren(/input\(/.test(code) ? `(sample input: ${sample})\n` : '', r.error ? h('span', { class: 'e' }, `${r.error.kind} (line ${r.error.line}): ${r.error.msg.en}`) : r.out || '(no output)'); chime(660, .05); } }, '▶ Run'), out); return box; }
+  if (n.startsWith('- ')) return h('ul', {}, n.split('\n').map(l => h('li', {}, rich(l.replace(/^- /, '')))));
+  const cls = /^(Remember|Example|Try|Rules?):/.test(n) ? n.split(':')[0].toLowerCase() : '';
+  return h('p', cls ? { class: 'callout ' + cls } : {}, rich(n));
 }
 function renderPage(sheet, { type, t, u }, pencil) {
   sheet.append(h('span', { class: 'code-tag' }, t.code), h('h2', {}, t.title + (S.set.sw ? ` · ${t.sw}` : '')));
