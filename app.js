@@ -8,7 +8,7 @@ const h = (t, a = {}, ...k) => { const e = document.createElement(t); for (const
 const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m, 30); };
 
 // ---- store (versioned) ----
-const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9 }, page: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
+const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9, ink: 0, light: 88 }, page: {}, edits: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
 let S; try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
 function applySettings() {
