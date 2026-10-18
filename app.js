@@ -37,6 +37,9 @@ const noteGet = async id => { const d = await idb; if (!d) return S.mine?.[id] |
 const notePut = async (id, v) => { const d = await idb; if (!d) { (S.mine ||= {})[id] = v; return save(); } d.transaction('notes', 'readwrite').objectStore('notes').put(v, id); };
 
 // ---- model ----
+// Split long notes at "## " headings so each page holds about one screen of text.
+const noteParts = t => { const parts = []; let n = 0; for (const e of t.notes) { const len = e.length; if (e.startsWith('## ') && n > 700) { parts.push(1); n = 0; } n += len; } parts.push(1); return parts.map((_, i) => i ? 'notes' + i : 'notes'); };
+const noteChunk = (t, i) => { const out = [[]]; let n = 0; for (const e of t.notes) { if (e.startsWith('## ') && n > 700) { out.push([]); n = 0; } out.at(-1).push(e); n += e.length; } return out[i] || []; };
 const form = f => forms[f];
 function pagesOf(f) {
   const out = [];
