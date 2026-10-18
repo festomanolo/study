@@ -237,10 +237,12 @@ function quiz(host, id, qs, extra) {
   qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
   host.append(form_, h('button', { class: 'pri', onclick: () => {
     let ok = 0;
-    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(h('span', { class: good ? 'ok' : 'no' }, good ? ' ✔' : ` ✘ → ${o[a]}`)); });
-    S.quiz[id] = Math.max(S.quiz[id] || 0, ok / qs.length); save(); res.replaceChildren(h('span', { class: 'score' }, `${ok}/${qs.length}`)); chime(ok === qs.length ? 880 : 300, .2); say(`Score ${ok} of ${qs.length}`);
-    extra?.(ok / qs.length);
-  } }, 'Check / Kagua'), res);
+    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(redMark(!!good), good ? '' : h('span', { class: 'no pen-fix' }, ` → ${o[a]}`)); });
+    S.quiz[id] = Math.max(S.quiz[id] || 0, ok / qs.length); save();
+    const r = ok / qs.length; res.replaceChildren(h('span', { class: 'score' }, `${ok}/${qs.length}`), h('div', { class: 'teacher' }, r === 1 ? 'Excellent! Hongera sana!' : r >= .6 ? 'Good. Revise the red ones. Sawa.' : 'Revise the notes and try again. Jaribu tena.'));
+    chime(ok === qs.length ? 880 : 300, .2); say(`Score ${ok} of ${qs.length}`);
+    extra?.(r);
+  } }, 'Check / Kagua'), h('button', { onclick: () => { form_.querySelectorAll('input').forEach(i => i.checked = false); form_.querySelectorAll('[id^="' + id + 'r"]').forEach(x => x.replaceChildren()); res.replaceChildren(); } }, '🔄 Futa / Jaribu tena'), res);
 }
 function checkpoint(sheet, u) {
   sheet.append(h('h2', {}, `Checkpoint — ${u.title}`), h('p', {}, h('small', {}, 'Practice material in NECTA style. Not an official paper.')));
