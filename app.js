@@ -44,7 +44,7 @@ const form = f => forms[f];
 function pagesOf(f) {
   const out = [];
   for (const u of form(f).units) {
-    for (const t of u.topics) for (const type of ['hook', 'notes', 'glossary', 'lab', ...(t.lab2 ? ['lab2'] : []), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
+    for (const t of u.topics) for (const type of [...noteParts(t), 'glossary', 'lab', ...(t.lab2 ? ['lab2'] : []), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
     out.push({ kind: 'cp', u, id: 'cp.' + u.id });
   }
   return out;
