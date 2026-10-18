@@ -231,6 +231,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
 }
 
 // ---- quiz & red pen ----
+const redMark = good => { const e = h('span', { class: 'redpen ' + (good ? 'ok' : 'no'), 'aria-label': good ? 'correct' : 'wrong' }); e.innerHTML = `<svg viewBox="0 0 24 24"><path d="${good ? 'M4 12l6 6L20 6' : 'M6 6l12 12M6 18L18 6'}"/></svg>`; return e; };
 function quiz(host, id, qs, extra) {
   const form_ = h('div', {}), res = h('div', { 'aria-live': 'polite' });
   qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
