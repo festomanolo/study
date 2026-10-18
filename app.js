@@ -1,6 +1,8 @@
 import { forms, codeQs } from './content.js';
 import { run, runSync, fmt } from './interp.js';
 import { bespoke } from './labs.js';
+import { DIAGRAMS } from './diagrams.js';
+import { makeDiagram } from './notebook.js';
 const $ = document.getElementById('app'), live = document.getElementById('live');
 const h = (t, a = {}, ...k) => { const e = document.createElement(t); for (const [n, v] of Object.entries(a)) n.startsWith('on') ? e.addEventListener(n.slice(2), v) : n === 'class' ? e.className = v : v !== false && e.setAttribute(n, v === true ? '' : v); for (const c of k.flat()) if (c != null) e.append(c); return e; };
 const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m, 30); };
