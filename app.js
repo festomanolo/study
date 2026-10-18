@@ -11,6 +11,7 @@ const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m,
 const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9, ink: 0, light: 88 }, page: {}, edits: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
 let S; try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+const INKS = [['#1b387b', '#1e232a', 'Bic Blue'], ['#23272e', '#0f172a', 'Gel Black'], ['#2e1f6e', '#1c1917', 'Indigo']];
 function applySettings() {
   const r = document.documentElement;
   const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
