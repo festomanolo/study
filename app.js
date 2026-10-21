@@ -52,12 +52,12 @@ const form = f => forms[f];
 function pagesOf(f) {
   const out = [];
   for (const u of form(f).units) {
-    for (const t of u.topics) for (const type of [...noteParts(t), 'glossary', 'lab', ...(t.lab2 ? ['lab2'] : []), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
+    for (const t of u.topics) for (const type of [...noteParts(t), 'glossary', 'lab', ...(t.labs || []).map((_, i) => 'lab' + (i + 2)), 'recall', 'practice', 'summary']) out.push({ kind: 'page', type, t, u, id: `${t.id}.${type}` });
     out.push({ kind: 'cp', u, id: 'cp.' + u.id });
   }
   return out;
 }
-const topicDone = t => S.lab[t.id] && (!t.lab2 || S.lab[t.id + '.2']) && (S.quiz[t.id] || 0) >= .6;
+const topicDone = t => S.lab[t.id] && (t.labs || []).every((_, i) => S.lab[`${t.id}.${i + 2}`]) && (S.quiz[t.id] || 0) >= .6;
 const unitPct = u => Math.round(100 * u.topics.filter(topicDone).length / u.topics.length);
 
 // ---- router ----
@@ -256,8 +256,8 @@ function renderPage(sheet, { type, t, u }, pencil) {
     sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), PHON[k] ? h('span', { class: 'phon' }, ` [${PHON[k][0]}]`) : '', ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)), marksView());
   } else if (type === 'recall') {
     sheet.append(h('p', {}, h('b', {}, 'Quick recall: tap a keyword, say the term aloud, tap again to check.')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('button', { class: 'chip', onclick() { this.textContent = this.textContent === d[2] ? k : d[2]; } }, d[2]))));
-  } else if (type === 'lab' || type === 'lab2') {
-    sheet.append(h('p', {}, 'Maabara / Lab'), lab(t, type === 'lab2'));
+  } else if (type.startsWith('lab')) {
+    sheet.append(h('p', {}, 'Maabara / Lab'), lab(t, +type.slice(3) || 0));
   } else if (type === 'practice') {
     quiz(sheet, t.id, t.quiz);
   } else {
@@ -299,8 +299,8 @@ function checkpoint(sheet, u) {
 // ---- labs ----
 const shuffle = a => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = (i * 7 + 3) % (i + 1); [r[i], r[j]] = [r[j], r[i]]; } return r; };
 function done(t, m = 'Lab complete! / Umemaliza!') { if (!S.lab[t.id]) { S.lab[t.id] = 1; save(); } chime(880, .2); say(m); }
-function lab(t0, two) {
-  const t = two ? { ...t0, id: t0.id + '.2' } : t0, L = two ? t0.lab2 : t0.lab, box = h('div', { class: 'lab' }, h('h4', {}, t.title));
+function lab(t0, k) {
+  const t = k ? { ...t0, id: `${t0.id}.${k}` } : t0, L = k ? t0.labs[k - 2] : t0.lab, box = h('div', { class: 'lab' }, h('h4', {}, t.title));
   const types = {
     console: () => consoleLab(box, t),
     sort() {
@@ -387,7 +387,7 @@ function consoleLab(box, t) {
 
 // ---- demo mode (#/demo): scripted tour for presenters ----
 function demo() {
-  const steps = ['#/bag', '#/cs/f2', '#/cs/f2/toc', `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.t.id === 'vars' && x.type === 'lab')}`, `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.t.id === 'debug' && x.type === 'lab')}`, `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.kind === 'cp' && x.u.id === 'F2-2.2')}`];
+  const steps = ['#/bag', '#/cs/f2', '#/cs/f2/toc', `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.t?.id === 'vars' && x.type === 'lab')}`, `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.t?.id === 'debug' && x.type === 'lab')}`, `#/cs/f2/p/${pagesOf('f2').findIndex(x => x.kind === 'cp' && x.u.id === 'F2-2.2')}`];
   let i = 0; const next = () => { if (i < steps.length) go(steps[i++]); else { clearInterval(demoT); } };
   clearInterval(demoT); demoT = setInterval(next, 6000); next();
 }
@@ -417,7 +417,7 @@ function exportProgress() {
   const a = h('a', { href: URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })), download: 'progress.csv' }); a.click();
 }
 
-const CACHE_V = 'manolo-v5';
+const CACHE_V = 'manolo-v6';
 window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();

@@ -132,3 +132,11 @@ u.mark{text-decoration:2px underline #c0392b;text-underline-offset:3px;color:var
 .labnav{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 .stampbrand,.mark,.grain,.light{pointer-events:none}
 .scene:has(.spread){padding-top:56px}
+/* bespoke labs */
+.beam{font-size:40px;width:56px;margin:0 auto;text-align:center;transition:transform .4s;pointer-events:none}
+.lock{font-size:20px}
+.room{border:2px solid var(--ink);border-radius:6px;padding:6px;margin:6px 0;background:#fffdf5aa}.room.inner{border-style:dashed;margin-left:18px;background:#eef2ff}.room small{display:block;color:#64748b}.moving{background:#fef08a;transition:all .3s}
+.belt{display:flex;gap:6px;min-height:44px;padding:6px;border:3px solid #475569;border-radius:20px;background:repeating-linear-gradient(90deg,#cbd5e1 0 10px,#e2e8f0 10px 20px);overflow-x:auto}.belt.spin{animation:belt .4s linear infinite}@keyframes belt{to{background-position:20px 0}}.belt .item{animation:drop .3s}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#14532d;padding:8px;border-radius:6px}.board .slot{background:#166534;color:#dcfce7;border-color:#86efac}
+.cake{display:flex;flex-direction:column;gap:4px;margin:6px 0}.layer{padding:8px;border-radius:6px;background:#fde68a;border:2px solid #b45309;cursor:pointer;transition:transform .2s}.layer:nth-child(2){background:#bfdbfe;border-color:#1d4ed8}.layer:nth-child(3){background:#d1d5db;border-color:#374151}.layer.on{transform:scale(1.04);box-shadow:0 0 0 3px #c0392b}
+.mail{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid #cbd5e1;padding:8px;border-radius:6px}.mailf{display:flex;gap:6px;border-bottom:1px solid #e2e8f0}.mailf input{flex:1;border:0}

@@ -145,11 +145,11 @@ export const codeQs = {
   'F2-2.2': [{ prompt: 'Read two ints a and b with input() and print their sum.', tests: [{ in: ['2', '3'], out: '5' }, { in: ['10', '-4'], out: '6' }] },
     { prompt: 'Read marks with input(); print "Pass" if marks >= 50 else "Fail".', tests: [{ in: ['70'], out: 'Pass' }, { in: ['49'], out: 'Fail' }] }],
 };
-export const labTypes = ['boda', 'conveyor', 'packets', 'files', 'console', 'sort', 'order', 'ladder', 'hot', 'pwd', 'flow'];
+export const labTypes = ['boda', 'conveyor', 'packets', 'files', 'types', 'ops', 'constants', 'fork', 'rooms', 'loopbelt', 'bughunt', 'tracetable', 'search', 'email', 'buildpc', 'generations', 'layercake', 'backup', 'flowrun', 'console', 'sort', 'order', 'ladder', 'hot', 'pwd', 'flow'];
 
-// Second (bespoke) lab per topic, and hook lines.
-const L2 = { lang: 'boda', tools: 'conveyor', internet: 'packets', 'install-files': 'files' };
+// Extra (bespoke) labs per topic, and hook lines.
+const LABS = { lang: ['boda'], tools: ['conveyor'], internet: ['packets', 'search', 'email'], 'install-files': ['files'], vars: ['types', 'ops', 'constants'], branch: ['fork', 'rooms', 'loopbelt'], debug: ['bughunt', 'tracetable'], hardware: ['buildpc', 'generations'], software: ['layercake'], handling: ['backup'], flowcharts: ['flowrun'] };
 const HOOKS = { lang: 'A boda-boda rider only reaches you if your directions are clear and exact.', vars: 'Your school locker has a name on it and holds one thing at a time. A variable works the same way.', tools: 'An interpreter at a meeting translates sentence by sentence; a translator of a book finishes the whole book first.', internet: 'Sending a parcel by many buses: if one bus breaks, the parcel takes another road.', threats: 'A stranger texts: "You won! Send your PIN." Do you reply?', passwords: 'Would you lock your house with a string?', algorithms: 'A recipe for chai is an algorithm you already use.', 'sys-types': 'A juice machine: fruit in, juice out, a jug to store it.', debug: 'Your answer is wrong but the calculator never complained. Where is the mistake?' };
-for (const f of Object.values(forms)) for (const u of f.units) for (const tp of u.topics) { if (L2[tp.id]) tp.lab2 = { type: L2[tp.id] }; if (HOOKS[tp.id]) tp.hook = HOOKS[tp.id]; }
+for (const f of Object.values(forms)) for (const u of f.units) for (const tp of u.topics) { if (LABS[tp.id]) tp.labs = LABS[tp.id].map(type => ({ type })); if (HOOKS[tp.id]) tp.hook = HOOKS[tp.id]; }
 import { NOTES, EXTRA } from './notes.js';
 for (const f of Object.values(forms)) for (const u of f.units) for (const tp of u.topics) { if (NOTES[tp.id]) tp.notes = NOTES[tp.id]; if (EXTRA[tp.id]) Object.assign(tp.terms, EXTRA[tp.id]); }

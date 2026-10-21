@@ -137,3 +137,13 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - `F2-1.5`: Search Smarter query game, Email Anatomy pretend inbox.
     - `F1-1.2`: Build-a-PC slot builder, Computer Generations timeline, Software Layer Cake, Backup 3-2-1 disaster simulator.
     - `F1-2.1`: Interactive canvas Flowchart Builder & token runner.
+
+---
+
+## Status (implemented)
+
+- **Part 2:** all 16 micro-features are in the app (`app.js`, `style.css`, `micro.js`, `interp.js`). The grade bands in Lab L follow common NECTA practice and should be checked against the current scheme.
+- **Part 3.1:** e2e tests rewritten to look up pages through `window.__manolo.pagesOf`; size report covers every root file and reports fonts; dead `hook` branch removed; doc paths and README fixed. Also fixed: code-lab Run/Step buttons were hidden by an old `.nav{display:none}` rule.
+- **Part 3.2:** `.gitignore` added; fonts self-hosted in `fonts/` (OFL); the legacy notebook uses a precompiled `legacy/tailwind.css` and local fonts, so nothing loads from the network. CI already existed.
+- **Part 3.3:** every unit checkpoint now has short-answer questions marked by an EN+SW keyword rubric (`micro.js` `SHORT`); all 15 listed bespoke labs are built in `labs.js` and covered by `tests/e2e/labs.mjs`.
+- **Still open:** teacher review of all Swahili (`docs/SWAHILI_REVIEW.csv` and `micro.js`), extra `[[term]]` links in `notes.js` (`EXTRA`), fonts are 195 KB against the 120 KB budget (subsetting needed), the whisper strip shows a topic-level Kiswahili takeaway plus term translations rather than a per-sentence translation.
