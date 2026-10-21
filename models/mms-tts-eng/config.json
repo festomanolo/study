@@ -30,3 +30,20 @@
   "num_hidden_layers": 6,
   "num_speakers": 1,
   "posterior_encoder_num_wavenet_layers": 16,
+  "prior_encoder_num_flows": 4,
+  "prior_encoder_num_wavenet_layers": 4,
+  "resblock_dilation_sizes": [
+    [
+      1,
+      3,
+      5
+    ],
+    [
+      1,
+      3,
+      5
+    ],
+    [
+      1,
+      3,
+      5
