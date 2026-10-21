@@ -152,3 +152,42 @@ def synthesize_wav(text: str) -> bytes:
         full = np.concatenate(pieces[:-1] if len(pieces) > 1 else pieces)
         peak = float(np.max(np.abs(full)))
         if peak > 1e-4:
+            full = (full / peak) * 0.88
+
+    pcm16 = np.clip(full * 32767.0, -32768, 32767).astype("<i2")
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes(pcm16.tobytes())
+    data = buf.getvalue()
+
+    _CACHE[cleaned] = data
+    if len(_CACHE) > _CACHE_MAX:
+        _CACHE.popitem(last=False)
+    return data
+
+
+class ManoloHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def log_message(self, fmt: str, *args) -> None:
+        pass
+
+    def do_GET(self) -> None:
+        parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path == "/api/tts/status":
+            body = json.dumps({
+                "ok": True,
+                "model": "Xenova/mms-tts-eng (ONNX INT8)",
+                "sampling_rate": SAMPLE_RATE,
+                "model_present": ONNX_PATH.exists(),
+            }).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
