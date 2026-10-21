@@ -63,3 +63,20 @@
   "upsample_kernel_sizes": [
     16,
     16,
+    4,
+    4
+  ],
+  "upsample_rates": [
+    8,
+    8,
+    2,
+    2
+  ],
+  "use_bias": true,
+  "use_stochastic_duration_prediction": true,
+  "vocab_size": 38,
+  "wavenet_dilation_rate": 1,
+  "wavenet_dropout": 0.0,
+  "wavenet_kernel_size": 5,
+  "window_size": 4
+}
