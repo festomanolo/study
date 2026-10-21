@@ -191,3 +191,47 @@ Stored per learner profile inside `localStorage` (`manolo.v1.<profile>`), requir
     M_ASSIGN_VS_EQ: 1
   },
   preferredBridge: 'analogy', // 'analogy' | 'visual-contrast' | 'swahili-step' | 'trace'
+  unlockedRemedials: ['vars.M_STR_NUM_COERCE.slip1']
+}
+```
+
+#### Mastery Update Rule (Lightweight Bayesian / EMA Update):
+- **First-try correct prediction / lab / quiz**: `mastery = Math.min(1, mastery + 0.35)` and clears active misconception flags for that concept.
+- **Specific misconception triggered**: `mastery = Math.max(0, mastery - 0.25)`, increments `misconceptions[tag]`, and queues the matching **Adaptive Remedial Slip** for immediate injection on the current page.
+- **Modality Adaptation**: If a learner still misses a concept after reading a text explanation, the engine shifts `preferredBridge` to `'visual-contrast'` or `'swahili-step'` so the next injected explanation uses a different representation.
+
+---
+
+### 4. How the Engine Dynamically Adds Content to Enhance Understanding
+
+When `S.understand` detects an active misconception or low mastery (`< 0.5`) on a concept, `renderPage()` in `app.js` dynamically mounts **Adaptive Notebook Inserts** (styled like a yellow revision slip taped into the Counter Book margin or a red-pen Mwalimu coaching box):
+
+1. **Second-Angle Local Analogy Swap (`Analogy Bridge`)**:
+   - *Trigger*: Learner fails a concept after seeing the default analogy (e.g., *School Locker* for variables).
+   - *Injected Content*: A taped yellow revision note offering a completely different everyday Tanzanian mental model:
+     > **Fikiri Tena (M-Pesa Balance Analogy):** Wakati salio lako la M-Pesa ni `TZS 5,000` kisha ukatumiwa `TZS 2,000`, simu haihifadhi salio mbili tofauti—inafuta `5,000` na kuandika `7,000` pale pale. Hivyo ndivyo `age = age + 1` inavyofanya!
+2. **Side-by-Side Visual Contrast Card (`Misconception X-Ray`)**:
+   - *Trigger*: Learner confuses two adjacent concepts (`=` vs `==`, `RAM` vs `SSD`, `Compiler` vs `Interpreter`, `"5"` vs `5`).
+   - *Injected Content*: A 2-column ruled comparison box showing **What You Did / Thought** on the left vs. **How the Computer Sees It** on the right, with a 1-tap runnable mini-diff.
+3. **Decomposed Micro-Step Unfolder (`Worked Sub-Steps`)**:
+   - *Trigger*: Learner fails a multi-step problem (e.g., operator precedence `2 + 3 * 4`, `for i in range(1, 4)` trace table, or `if / elif / else` ordering).
+   - *Injected Content*: Breaks the single jump into 3 numbered micro-lines where the learner taps to reveal or fill one intermediate value at a time before seeing the final answer.
+4. **15-Second "Prove You Captured It" Micro-Check (`Exit Ticket Slip`)**:
+   - *Trigger*: Shown at the bottom of an injected remedial card.
+   - *Injected Content*: A single, targeted 2-choice or 1-word prediction question testing *only* the repaired misconception (e.g., *"Quick check: What does `print("3" + "3")` output? [ 6 ] [ 33 ]"*). Answering correctly folds the remedial slip into a compact green `[Concept Captured]` margin stamp and updates `S.understand[conceptId].mastery`.
+5. **Prerequisite Bridge Card (`Back-Link Refresher`)**:
+   - *Trigger*: Learner struggles in `branch` (`if marks >= 50:`) or `debug` because their `vars` comparison/type mastery is `< 0.4`.
+   - *Injected Content*: Mounts a collapsible 30-second refresher slip at the top of the `branch` page reviewing `>=` and `==` right in place, without forcing the student to lose their page in the notebook.
+
+---
+
+### 5. Concrete Implementation Blueprint for MANOLO Backpack
+
+1. **Create `understand.js` (~3.5 KB gz)**:
+   - Export `CONCEPTS` (mapping each topic's atomic concepts, prerequisite links, and misconception IDs).
+   - Export `REMEDIALS` (bilingual EN + Kiswahili adaptive content blocks: alternate analogies, visual contrast pairs, worked sub-steps, and 1-question micro-checks).
+   - Export `recordSignal(S, { concept, ok, tag, kind })` and `adaptiveBlocksFor(S, topicId, h, onCapture)`.
+2. **Wire Signals in `app.js`, `labs.js`, and `interp.js`**:
+   - In `quiz()` and `checkpoint()`: pass the chosen distractor index `j` to `recordSignal()` to log any distractor-specific misconception tag.
+   - In `consoleLab()`: when `run()` yields `t === 'error'` or when `compare()` finds a trace-table mismatch, call `recordSignal()` with the diagnosed error/trace tag.
+   - In `renderPage()`: mount `adaptiveBlocksFor(S, t.id)` right below the topic hook or relevant section heading so the notebook page physically adapts to how that specific student understands.
