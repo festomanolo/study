@@ -75,3 +75,42 @@ def ensure_model() -> tuple[ort.InferenceSession, dict[str, int]]:
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = 4
         _SESSION = ort.InferenceSession(str(ONNX_PATH), sess_options=opts, providers=["CPUExecutionProvider"])
+        return _SESSION, _VOCAB
+
+
+_SYMBOL_MAP = (
+    ("==", " equals "),
+    ("!=", " not equal to "),
+    (">=", " greater than or equal to "),
+    ("<=", " less than or equal to "),
+    ("//", " floor divided by "),
+    ("**", " to the power of "),
+    ("->", " leads to "),
+    ("→", " leads to "),
+    ("↔", " to "),
+    ("✔", " correct "),
+    ("✘", " wrong "),
+    ("=", " equals "),
+    ("+", " plus "),
+    ("%", " modulo "),
+    ("&", " and "),
+)
+
+
+def clean_for_tts(text: str) -> str:
+    text = re.sub(r"[✏️🔊📎🇹🇿⚡🧩🎒⚙🎯👥📋🔧⚠✔✘•·]", " ", text)
+    for sym, word in _SYMBOL_MAP:
+        text = text.replace(sym, word)
+    text = re.sub(r"\b(\d+)\.(\d+)\b", lambda m: f"{_num_to_words(int(m.group(1)))} point {' '.join(_ONES[int(d)] for d in m.group(2))}", text)
+    text = re.sub(r"\b\d{1,6}\b", lambda m: _num_to_words(int(m.group(0))), text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _text_to_ids(text: str, vocab: dict[str, int]) -> list[int]:
+    lowered = text.lower().strip()
+    ids = [0]
+    for ch in lowered:
+        if ch in vocab:
+            ids.extend([vocab[ch], 0])
+    return ids
