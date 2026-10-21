@@ -114,3 +114,41 @@ def _text_to_ids(text: str, vocab: dict[str, int]) -> list[int]:
         if ch in vocab:
             ids.extend([vocab[ch], 0])
     return ids
+
+
+def synthesize_wav(text: str) -> bytes:
+    cleaned = clean_for_tts(text)
+    if not cleaned:
+        cleaned = "blank"
+    if cleaned in _CACHE:
+        _CACHE.move_to_end(cleaned)
+        return _CACHE[cleaned]
+
+    sess, vocab = ensure_model()
+    clauses = [c.strip() for c in re.split(r"[.!?;:\n]+", cleaned) if c.strip()]
+    if not clauses:
+        clauses = [cleaned]
+
+    pieces: list[np.ndarray] = []
+    pause = np.zeros(int(SAMPLE_RATE * 0.14), dtype=np.float32)
+
+    for clause in clauses:
+        ids = _text_to_ids(clause, vocab)
+        if len(ids) <= 1:
+            continue
+        input_ids = np.array([ids], dtype=np.int64)
+        mask = np.ones_like(input_ids, dtype=np.int64)
+        with _LOCK:
+            out = sess.run(None, {"input_ids": input_ids, "attention_mask": mask})
+        wav = out[0].squeeze().astype(np.float32)
+        if wav.ndim == 0 or wav.size == 0:
+            continue
+        pieces.append(wav)
+        pieces.append(pause)
+
+    if not pieces:
+        full = np.zeros(int(SAMPLE_RATE * 0.2), dtype=np.float32)
+    else:
+        full = np.concatenate(pieces[:-1] if len(pieces) > 1 else pieces)
+        peak = float(np.max(np.abs(full)))
+        if peak > 1e-4:
