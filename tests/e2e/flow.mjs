@@ -20,5 +20,10 @@ const cells = p.locator('.tracepad input'); await cells.nth(0).fill('a=2'); awai
 await p.click('button.pri:text-is("▶ Run")'); ok(await p.locator('.tracepad .redpen.ok').count() === 2, 'trace scratchpad compares predictions');
 await p.click('.dogear'); await p.goto(url + '#/cs/f2/toc'); await p.waitForSelector('.toc'); ok(await p.locator('text=Folded corners').count() === 1, 'dog-ear listed in contents');
 ok(/\d\d\/\d\d\/\d{4}/.test(await (await p.goto(url + '#/cs/f2/p/' + lab), p.waitForSelector('.datebox'), p.textContent('.datebox'))), 'date stamp');
+const prac = await pageOf('f2', "x.t?.id === 'vars' && x.type === 'practice'"); await p.goto(url + '#/cs/f2/p/' + prac); await p.waitForSelector('.q');
+await p.locator('.q', { hasText: '"5" + 5 gives' }).locator('label', { hasText: /^\s*10$/ }).click(); await p.click('button.pri:text-is("Check / Kagua")');
+ok(await p.locator('.help', { hasText: 'Text and numbers do not add' }).count() >= 1, 'engine adds a help card for the misconception');
+await p.goto(url + '#/cs/f2/toc'); await p.waitForSelector('.toc'); ok(await p.locator('text=Your understanding').count() === 1, 'contents shows understanding panel');
+await p.click('text=/Review \\d+ missed/'); await p.waitForSelector('.q'); ok(await p.locator('.q', { hasText: '"5" + 5 gives' }).count() === 1, 'review queue re-asks missed question');
 await p.goto(url + '#/cs/f1/p/0'); await p.waitForSelector('.sheet'); ok(true, 'deep link');
 ok(!errs.length, 'no page errors ' + errs); await b.close();

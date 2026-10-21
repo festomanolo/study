@@ -4,6 +4,7 @@ import { bespoke } from './labs.js';
 import { DIAGRAMS } from './diagrams.js';
 import { makeDiagram } from './notebook.js';
 import { PHON, TRAPS, GIST, SHORT, markShort } from './micro.js';
+import { learner, MIS, errTag as errTagOf } from './learner.js';
 const $ = document.getElementById('app'), live = document.getElementById('live');
 const h = (t, a = {}, ...k) => { const e = document.createElement(t); for (const [n, v] of Object.entries(a)) n.startsWith('on') ? e.addEventListener(n.slice(2), v) : n === 'class' ? e.className = v : v !== false && e.setAttribute(n, v === true ? '' : v); for (const c of k.flat()) if (c != null) e.append(c); return e; };
 const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m, 30); };
@@ -16,6 +17,7 @@ let profiles = [], active = ''; try { profiles = JSON.parse(ls('manolo.profiles'
 let S; function load() { try { S = { ...structuredClone(DEF), ...JSON.parse(ls(keyOf(active)) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); } }
 load();
 const save = () => ls(keyOf(active), JSON.stringify(S));
+const Lr = () => learner(S, save); // understanding engine bound to the active learner
 const nameOf = id => id || (() => { try { return JSON.parse(ls('manolo.v1') || '{}').name; } catch {} })() || 'Learner 1';
 function switchProfile(id) { save(); active = id; ls('manolo.active', id); load(); applySettings(); }
 const INKS = [['#1b387b', '#1e232a', 'Bic Blue'], ['#23272e', '#0f172a', 'Gel Black'], ['#2e1f6e', '#1c1917', 'Indigo']];
@@ -84,6 +86,7 @@ function route() {
   if (!S.seen && !p[0]) return boot();
   if (p[0] === 'cs' && forms[p[1]]) {
     if (p[2] === 'toc') return toc(p[1]);
+    if (p[2] === 'review') return review(p[1]);
     if (p[2] === 'p') return pageScene(p[1], +p[3] || 0);
     return cover(p[1]);
   }
@@ -158,13 +161,16 @@ function cover(f) {
 // ---- contents ----
 function toc(f) {
   const pgs = pagesOf(f), sheet = h('div', { class: 'sheet toc' }, h('h2', {}, `Yaliyomo / Contents — ${form(f).title}`));
+  const topics = form(f).units.flatMap(u => u.topics), weak = Lr().weakest(topics), missed = Lr().missed().filter(k => topics.some(t => k.startsWith(t.id + ':')));
+  if (weak.length || missed.length) sheet.append(h('h3', {}, '🧠 Uelewa wako / Your understanding'), ...weak.map(t => { const tag = Lr().tagsFor(t.id)[0], n = pgs.findIndex(x => x.t === t); return h('button', { class: 'row', onclick: () => riffle(f, n) }, h('span', { class: 'tick mdot ' + Lr().level(t.id) }, '●'), `Revise: ${t.title}${tag ? ' — ' + MIS[tag][1] : ''}`, h('span', { class: 'dots' }), Math.round((Lr().mastery(t.id) ?? 0) * 100) + '%'); }),
+    missed.length ? h('button', { class: 'row', onclick: () => go(`#/cs/${f}/review`) }, h('span', { class: 'tick' }, '🔁'), `Marudio / Review ${missed.length} missed question${missed.length > 1 ? 's' : ''}`, h('span', { class: 'dots' }), 'go') : null);
   const ears = pgs.map((x, i) => [x, i]).filter(([x]) => S.dogear[x.id]);
   if (ears.length) sheet.append(h('h3', {}, '📑 Folded corners / Kurasa zilizokunjwa'), ...ears.map(([x, i]) => h('button', { class: 'row', onclick: () => riffle(f, i) }, h('span', { class: 'tick' }, '◥'), x.t ? `${x.t.title} · ${x.type}` : 'Checkpoint', h('span', { class: 'dots' }), 'p.' + (i + 1))));
   for (const u of form(f).units) {
     sheet.append(h('h3', {}, `${u.id} ${u.title} (${u.periods} periods) `, h('small', {}, unitPct(u) + '%')), h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': unitPct(u) }, h('i', { style: `width:${unitPct(u)}%` })));
     for (const t of u.topics) {
       const n = pgs.findIndex(x => x.t === t);
-      sheet.append(h('button', { class: 'row', onclick: () => riffle(f, n) }, h('span', { class: 'tick' }, topicDone(t) ? '✔' : ''), t.title, h('span', { class: 'dots' }), 'p.' + (n + 1)));
+      sheet.append(h('button', { class: 'row', onclick: () => riffle(f, n) }, h('span', { class: 'tick' }, topicDone(t) ? '✔' : ''), t.title, h('span', { class: 'mdot ' + Lr().level(t.id), title: 'Understanding: ' + Lr().level(t.id) }, '●'), h('span', { class: 'dots' }), 'p.' + (n + 1)));
     }
     sheet.append(h('button', { class: 'row', onclick: () => riffle(f, pgs.findIndex(x => x.u === u && x.kind === 'cp')) }, h('span', { class: 'tick' }, S.quiz[u.id] >= .6 ? '✔' : ''), '📝 Checkpoint', h('span', { class: 'dots' }), 'test'));
   }
@@ -259,6 +265,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
     const part = +type.slice(5) || 0, total = noteParts(t).length;
     if (part === 0 && t.hook) sheet.append(h('p', { class: 'callout try' }, `Think: ${t.hook}`));
     if (part === 0 && TRAPS[t.id]) sheet.append(trap());
+    if (part === 0) { const tg = Lr().tagsFor(t.id)[0]; if (tg) sheet.append(helpCard(tg, 'Added for you because of earlier answers or code errors.')); else if (Lr().level(t.id) === 'weak') sheet.append(h('div', { class: 'help', role: 'note' }, h('b', {}, '🧠 Msaada kwako'), h('p', {}, 'Your answers show this topic is still new. Read slowly, try every ▶ Run, then do the lab before the quiz.'), S.set.sw ? h('p', {}, h('i', {}, GIST[t.id] || '')) : null)); }
     noteChunk(t, part).forEach((n, i) => { sheet.append(block(n, rich)); if (part === 0 && i === 0 && DIAGRAMS[t.id]) sheet.append(diagramBlock(sheet, t, pencil)); });
     if (total > 1) sheet.append(h('small', {}, `Notes ${part + 1}/${total}`));
     if (part < total - 1) return;
@@ -273,33 +280,54 @@ function renderPage(sheet, { type, t, u }, pencil) {
   } else if (type.startsWith('lab')) {
     sheet.append(h('p', {}, 'Maabara / Lab'), lab(t, +type.slice(3) || 0));
   } else if (type === 'practice') {
-    quiz(sheet, t.id, t.quiz);
+    quiz(sheet, t.id, t.quiz, null, t.quiz.map((_, i) => ({ topic: t.id, qi: i })));
   } else {
-    sheet.append(h('p', {}, h('b', {}, 'Key points / Mambo muhimu')), ...t.summary.map(s => h('p', {}, '• ' + s)), h('p', {}, h('b', {}, 'NECTA keywords: '), Object.values(t.terms).map(d => d[2]).join('; ')), trap(), marksView());
+    sheet.append(h('p', {}, h('b', {}, 'Key points / Mambo muhimu')), ...t.summary.map(s => h('p', {}, '• ' + s)), h('p', {}, h('b', {}, 'NECTA keywords: '), Object.values(t.terms).map(d => d[2]).join('; ')), trap(), ...Lr().tagsFor(t.id).map(tg => helpCard(tg)), marksView());
   }
+}
+
+// ---- understanding engine UI ----
+const plain = s => s.split(/(`.+?`)/).map(x => x.startsWith('`') ? h('span', { class: 'code' }, x.slice(1, -1)) : x);
+function helpCard(tag, why) {
+  const [topic, title, en, sw, analogy, code, [q, opts, ans]] = MIS[tag], res = h('div', { 'aria-live': 'polite' });
+  const card = h('div', { class: 'help', role: 'note' }, h('b', {}, '🧠 Msaada kwako · ' + title), why ? h('small', {}, why) : null, h('p', {}, plain(en)), S.set.sw ? h('p', {}, h('i', {}, sw)) : null, h('p', {}, '💡 ', analogy), code ? block('```py\n' + code + '\n```', plain) : null,
+    h('p', {}, h('b', {}, 'Check: '), q), h('div', { class: 'items' }, opts.map((o, j) => h('button', { class: 'chip', onclick: () => { const ok = j === ans; Lr().observe(topic, ok, { tag }); chime(ok ? 880 : 240, .12); res.replaceChildren(redMark(ok), ok ? ' Umeelewa! Got it.' : ` Not yet — the answer is "${opts[ans]}". Read the explanation again.`); if (ok) card.classList.add('solved'); } }, o))), res);
+  return card;
+}
+function review(f) {
+  const topics = form(f).units.flatMap(u => u.topics), keys = Lr().missed().filter(k => topics.some(t => k.startsWith(t.id + ':'))).slice(0, 5);
+  const sheet = h('div', { class: 'sheet' }, h('h2', {}, 'Marudio / Review'));
+  if (!keys.length) sheet.append(h('p', {}, 'Nothing to review. Hongera!'));
+  else { const meta = keys.map(k => { const [id, qi] = k.split(':'); return { topic: id, qi: +qi, q: topics.find(t => t.id === id).quiz[+qi] }; }); sheet.append(h('p', {}, h('small', {}, 'Questions you missed earlier. Answer them right and they leave the list.'))); quiz(sheet, 'review', meta.map(x => x.q), null, meta); }
+  scene(spread(sheet), h('button', { onclick: () => go(`#/cs/${f}/toc`) }, '← Contents'));
 }
 
 // ---- quiz & red pen ----
 const redMark = good => { const e = h('span', { class: 'redpen ' + (good ? 'ok' : 'no'), 'aria-label': good ? 'correct' : 'wrong' }); e.innerHTML = `<svg viewBox="0 0 24 24"><path d="${good ? 'M4 12l6 6L20 6' : 'M6 6l12 12M6 18L18 6'}"/></svg>`; return e; };
-function quiz(host, id, qs, extra) {
+function quiz(host, id, qs, extra, meta) {
   const form_ = h('div', {}), res = h('div', { 'aria-live': 'polite' }), turns = [];
   const setTurns = () => turns.forEach((el, i) => el.textContent = S.set.group > 1 ? ` 👥 Swali la ${i + 1} · Mwanafunzi ${'ABCD'[i % S.set.group]}` : '');
   const grp = h('button', { class: 'chip', title: 'Pass-the-phone: friends take turns, one question each', onclick: () => { S.set.group = S.set.group % 4 + 1; save(); grp.textContent = `👥 Kikundi: ${S.set.group}`; setTurns(); } }, `👥 Kikundi: ${S.set.group}`);
   host.append(grp);
-  qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), turns[i] = h('small', { class: 'turn' }), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
+  // Options are shuffled per question (stable for this page) so the answer is not always the first one.
+  const order = (n, seed) => { const r = [...Array(n).keys()]; let x = [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7); for (let k = n - 1; k > 0; k--) { x = (x * 1103515245 + 12345) >>> 0; const j = x % (k + 1); [r[k], r[j]] = [r[j], r[k]]; } return r; };
+  qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), turns[i] = h('small', { class: 'turn' }), ...order(o.length, id + q).map(j => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + o[j])), h('span', { id: `${id}r${i}` }))));
   setTurns();
   host.append(form_, h('button', { class: 'pri', onclick: () => {
     let ok = 0;
-    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(redMark(!!good), good ? '' : h('span', { class: 'no pen-fix' }, ` → ${o[a]}`)); });
+    const wrongTags = new Set();
+    qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0;
+      if (meta?.[i] && v) { Lr().answer(meta[i].topic, meta[i].qi, !!good); const tg = Lr().tagsFor(meta[i].topic)[0]; if (!good && tg) wrongTags.add(tg); } form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(redMark(!!good), good ? '' : h('span', { class: 'no pen-fix' }, ` → ${o[a]}`)); });
     S.quiz[id] = Math.max(S.quiz[id] || 0, ok / qs.length); save();
     const r = ok / qs.length; res.replaceChildren(h('span', { class: 'score' }, `${ok}/${qs.length}`), h('div', { class: 'teacher' }, r === 1 ? 'Excellent! Hongera sana!' : r >= .6 ? 'Good. Revise the red ones. Sawa.' : 'Revise the notes and try again. Jaribu tena.'));
     chime(ok === qs.length ? 880 : 300, .2); say(`Score ${ok} of ${qs.length}`);
+    for (const tg of [...wrongTags].slice(0, 2)) res.append(helpCard(tg, 'Based on the questions you just missed.'));
     extra?.(r);
   } }, 'Check / Kagua'), h('button', { onclick: () => { form_.querySelectorAll('input').forEach(i => i.checked = false); form_.querySelectorAll('[id^="' + id + 'r"]').forEach(x => x.replaceChildren()); res.replaceChildren(); } }, '🔄 Futa / Jaribu tena'), res);
 }
 function checkpoint(sheet, u) {
   sheet.append(h('h2', {}, `Checkpoint — ${u.title}`), h('p', {}, h('small', {}, 'Practice material in NECTA style. Not an official paper.')));
-  const qs = u.topics.flatMap(t => t.quiz); quiz(sheet, u.id, qs);
+  const qs = u.topics.flatMap(t => t.quiz); quiz(sheet, u.id, qs, null, u.topics.flatMap(t => t.quiz.map((_, i) => ({ topic: t.id, qi: i }))));
   for (const [i, sq] of (SHORT[u.id] || []).entries()) {
     const ta = h('textarea', { 'aria-label': 'Your answer', rows: 3 }), out = h('div', { 'aria-live': 'polite' });
     sheet.append(h('div', { class: 'lab' }, h('b', {}, `Section B · Q${i + 1}: `), sq.q, ta, h('button', { onclick: () => { const got = markShort(ta.value, sq.keys), sc = got.filter(Boolean).length; S.quiz[`${u.id}.sa${i}`] = Math.max(S.quiz[`${u.id}.sa${i}`] || 0, sc / got.length); save(); out.replaceChildren(...got.map((g, j) => h('div', {}, redMark(g), ` Mark ${j + 1}: ${g ? 'awarded' : 'missing — e.g. "' + sq.keys[j][0] + '"'}`)), h('span', { class: 'score' }, `${sc}/${got.length}`)); chime(sc === got.length ? 880 : 300, .2); } }, 'Sahihisha / Mark'), out));
@@ -312,7 +340,7 @@ function checkpoint(sheet, u) {
 
 // ---- labs ----
 const shuffle = a => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = (i * 7 + 3) % (i + 1); [r[i], r[j]] = [r[j], r[i]]; } return r; };
-function done(t, m = 'Lab complete! / Umemaliza!') { if (!S.lab[t.id]) { S.lab[t.id] = 1; save(); } chime(880, .2); say(m); }
+function done(t, m = 'Lab complete! / Umemaliza!') { if (!S.lab[t.id]) { S.lab[t.id] = 1; Lr().observe(t.id.split('.')[0], true); } chime(880, .2); say(m); }
 function lab(t0, k) {
   const t = k ? { ...t0, id: `${t0.id}.${k}` } : t0, L = k ? t0.labs[k - 2] : t0.lab, box = h('div', { class: 'lab' }, h('h4', {}, t.title));
   const types = {
@@ -386,7 +414,7 @@ function consoleLab(box, t) {
       if (e.t === 'print') { out.append(e.text + '\n'); trace.push([snap(), e.text]); }
       else if (e.t === 'assign') { const old = vars.get(e.name); vars.set(e.name, e); trace.push([snap(), '']); boxes.replaceChildren(...[...vars].map(([n, v]) => h('div', { class: 'vbox' }, h('small', {}, n + ' : ' + v.typ), fmt(v.value)))); void old; }
       else if (e.t === 'input') { const i = h('input', { 'aria-label': e.prompt || 'input' }), form2 = h('form', { onsubmit: ev => { ev.preventDefault(); out.append(i.value + '\n'); form2.remove(); advance(stopAtLine, i.value); } }, e.prompt + ' ', i, h('button', {}, 'OK')); out.append(form2); i.focus(); return true; }
-      else if (e.t === 'error') { out.append(h('div', { class: 'e' }, `${e.kind} (line ${e.line}): ${e.msg.en}`, S.set.sw ? h('i', {}, ` — ${e.msg.sw}`) : '')); mark(e.line); gen = null; return false; }
+      else if (e.t === 'error') { Lr().codeError(t.id.split('.')[0], e); const tg = MIS[errTagOf(e)]; out.append(h('div', { class: 'e' }, `${e.kind} (line ${e.line}): ${e.msg.en}`, S.set.sw ? h('i', {}, ` — ${e.msg.sw}`) : '')); if (tg && !box.querySelector('.help')) out.after(helpCard(errTagOf(e), 'Added because of this error.')); mark(e.line); gen = null; return false; }
       else if (e.t === 'done') { gen = null; mark(0); compare(); done(t); return false; }
       else if (e.t === 'line') { mark(e.line); if (stopAtLine) return true; }
     }
@@ -427,11 +455,11 @@ function settings() {
   document.body.append(dlg); dlg.querySelector('input,button')?.focus();
 }
 function exportProgress() {
-  const rows = ['topic,lab,best_quiz']; for (const f of Object.values(forms)) for (const u of f.units) for (const t of u.topics) rows.push(`${t.code.replace(/,/g, ';')} ${t.id},${S.lab[t.id] ? 1 : 0},${Math.round((S.quiz[t.id] || 0) * 100)}`);
+  const rows = ['learner,topic,lab,best_quiz,understanding_pct,level,misconceptions']; for (const f of Object.values(forms)) for (const u of f.units) for (const t of u.topics) rows.push(`${(S.name || 'Learner').replace(/,/g, ' ')},${t.code.replace(/,/g, ';')} ${t.id},${S.lab[t.id] ? 1 : 0},${Math.round((S.quiz[t.id] || 0) * 100)},${Lr().mastery(t.id) === null ? '' : Math.round(Lr().mastery(t.id) * 100)},${Lr().level(t.id)},${Lr().tagsFor(t.id).join(' ')}`);
   const a = h('a', { href: URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })), download: 'progress.csv' }); a.click();
 }
 
-const CACHE_V = 'manolo-v7';
+const CACHE_V = 'manolo-v8';
 window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();
