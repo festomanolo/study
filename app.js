@@ -192,9 +192,9 @@ function pageScene(f, n, ghost = false) {
   const withDiagram = what => () => { if (!want) return; if (dg) { what === 'sim' ? dg.sim(hud) : dg.recalling ? dg.stopRecall() : dg.recall(tray); } else { try { sessionStorage.setItem('manolo.pending', what); } catch {} go(`#/cs/${f}/p/${topicFirst}`); } };
   let talking = false; const stopTalk = () => { talking = false; ttsStop(); sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
   const talk = () => {
-    if (talking) return stopTalk(); if (!('speechSynthesis' in window)) return say('Speech is not available on this device.');
-    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on'); speechSynthesis.cancel();
-    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); const m = new SpeechSynthesisUtterance(b.textContent.replace(/✏️?/g, '')); m.rate = S.set.rate; m.onend = next; m.onerror = stopTalk; speechSynthesis.speak(m); };
+    if (talking) return stopTalk();
+    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on');
+    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); if (blocks[i]) ttsPrefetch(blocks[i].textContent); ttsSpeak(b.textContent, { rate: S.set.rate, onEnd: next, onError: stopTalk }); };
     next();
   };
   const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
