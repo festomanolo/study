@@ -61,7 +61,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
      - If a line starts with a capitalized Python keyword/builtin (`Print`, `Input`, `If`, `Elif`, `Else`, `For`, `While`, `Range`, `Int`, `Float`, `Str`, `Len`), show a 1-tap yellow chip above the console: `Simu imeweka herufi kubwa "Print". Rekebisha iwe "print"? [Fix Auto-Caps]`.
 8. **Torn-Paper "Dry-Run / Trace Table" Scratchpad (`consoleLab()` in `app.js`)**:
    - **Why**: NECTA Form 2 & Form 4 programming questions heavily test **manual trace tables** (tracking variable values line by line on paper without a computer).
-   - **Micro-UX**: Add a `[📋 Kikaratasi cha Trace]` toggle inside `consoleLab` that opens a 3-column ruled paper slip (`Step | Variable Values | Printed Output`) where students type their prediction before pressing `▶ Run`, then compares their prediction with the actual `vars` and `out` from `interp.js`.
+   - **Micro-UX**: Add a `[Kikaratasi cha Trace]` toggle inside `consoleLab` that opens a 3-column ruled paper slip (`Step | Variable Values | Printed Output`) where students type their prediction before pressing `Run`, then compares their prediction with the actual `vars` and `out` from `interp.js`.
 9. **1-Tap Mobile Token Bar Expansion (`keys` in `consoleLab()`, `app.js` line 301)**:
    - **Why**: Beyond `: ( ) " = [ ] Tab`, students struggle to find `_`, `>=`, `<=`, `!=`, `==`, `#`, and `+` on phone keyboards.
    - **Micro-UX**: Add `==`, `>=`, `!=`, `_`, `#`, `print()`, and `input()` as scrollable 1-tap ink chips above the code textarea.
