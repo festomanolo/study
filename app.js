@@ -32,8 +32,22 @@ function applySettings() {
 const spread = (sheet, clip) => h('div', { class: 'spread' }, h('div', { class: 'glimpse' }), h('div', { class: 'pages' }, sheet, clip || null, h('div', { class: 'grain' }), h('div', { class: 'light' }), h('div', { class: 'stampbrand' }, 'MANOLO'), h('div', { class: 'mark' }, 'festomanolo.com')));
 const reduced = () => document.documentElement.classList.contains('reduce');
 
-// ---- audio: synthetic chimes (0 KB) ----
-let ac; function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} }
+// ---- audio: synthetic chimes (0 KB) + local neural TTS (/api/tts with Web Speech fallback) ----
+let ac, curAudio = null;
+function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} }
+function ttsStop() { if (curAudio) { try { curAudio.pause(); curAudio.src = ''; } catch {} curAudio = null; } try { speechSynthesis.cancel(); } catch {} }
+function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
+function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
+  ttsStop(); const c = t.replace(/✏️?/g, '').trim(); if (!c) return onEnd?.();
+  const a = new Audio('/api/tts?text=' + encodeURIComponent(c)); curAudio = a; a.playbackRate = rate || 1;
+  a.onended = () => { if (curAudio === a) curAudio = null; onEnd?.(); };
+  a.onerror = () => {
+    if (curAudio === a) curAudio = null;
+    if ('speechSynthesis' in window) { try { const m = new SpeechSynthesisUtterance(c); m.rate = rate || 1; if (onEnd) m.onend = onEnd; if (onError) m.onerror = onError; speechSynthesis.speak(m); return; } catch {} }
+    onError ? onError() : say('Speech is not available on this device.');
+  };
+  a.play().catch(() => a.onerror?.());
+}
 
 // ---- spring ----
 function spring(from, to, cb, k = 180, c = 18) { let x = from, v = 0, stop = false; (function f() { if (stop) return; v += (-k * (x - to) - c * v) / 60; x += v / 60; cb(x); if (Math.abs(x - to) > .001 || Math.abs(v) > .01) requestAnimationFrame(f); else cb(to); })(); return () => stop = true; }
@@ -176,11 +190,11 @@ function pageScene(f, n, ghost = false) {
   const dg = sheet._dg, tray = h('div', { class: 'tray', hidden: true }), hud = h('div', { class: 'hud2', hidden: true, role: 'status' });
   const topicFirst = pg.t ? pgs.findIndex(x => x.t === pg.t) : -1, want = pg.t && DIAGRAMS[pg.t.id];
   const withDiagram = what => () => { if (!want) return; if (dg) { what === 'sim' ? dg.sim(hud) : dg.recalling ? dg.stopRecall() : dg.recall(tray); } else { try { sessionStorage.setItem('manolo.pending', what); } catch {} go(`#/cs/${f}/p/${topicFirst}`); } };
-  let talking = false; const stopTalk = () => { talking = false; try { speechSynthesis.cancel(); } catch {} sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
+  let talking = false; const stopTalk = () => { talking = false; ttsStop(); sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
   const talk = () => {
-    if (talking) return stopTalk(); if (!('speechSynthesis' in window)) return say('Speech is not available on this device.');
-    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on'); speechSynthesis.cancel();
-    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); const m = new SpeechSynthesisUtterance(b.textContent.replace(/✏️?/g, '')); m.rate = S.set.rate; m.onend = next; m.onerror = stopTalk; speechSynthesis.speak(m); };
+    if (talking) return stopTalk();
+    const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on');
+    const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); if (blocks[i]) ttsPrefetch(blocks[i].textContent); ttsSpeak(b.textContent, { rate: S.set.rate, onEnd: next, onError: stopTalk }); };
     next();
   };
   const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
@@ -232,7 +246,7 @@ function block(n, rich) {
 function renderPage(sheet, { type, t, u }, pencil) {
   sheet.append(h('span', { class: 'code-tag' }, t.code), h('h2', {}, t.title + (S.set.sw ? ` · ${t.sw}` : '')));
   if (topicDone(t)) sheet.append(h('div', { class: 'seen', 'aria-label': 'Checked by teacher' }, '✓ Seen', h('br'), 'Mwl. Manolo', h('br'), h('small', {}, S.dates[`${t.id}.practice`] || '')));
-  const speak = w => { try { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(w); m.lang = 'en-GB'; m.rate = .7; speechSynthesis.speak(m); } catch {} };
+  const speak = w => ttsSpeak(w, { rate: .85 });
   const term = k => { const d = t.terms[k.toLowerCase()], ph = PHON[k.toLowerCase()]; return h('button', { class: 'term', onclick: e => { e.stopPropagation(); if (!S.set.sw) return; pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + k + ' = ' + d[0]), ph ? h('span', { class: 'phon' }, ` [${ph[0]}] `) : '', ph ? h('button', { class: 'chip', onclick: () => speak(k) }, '🔊 Tamka') : '', h('br'), d[1], h('br'), h('i', {}, 'NECTA: ' + d[2])); chime(520, .05); } }, k); };
   const trap = () => TRAPS[t.id] && h('div', { class: 'trap', role: 'note' }, h('b', {}, '⚠ Mtego wa Mtihani / Exam Trap'), h('p', {}, rich(TRAPS[t.id][0])), S.set.sw ? h('p', {}, h('i', {}, TRAPS[t.id][1])) : null);
   const marksView = () => { const box = h('div', { class: 'marks' }); const draw = () => box.replaceChildren(h('button', { class: 'chip' + (S.set.marks ? ' sel' : ''), onclick: () => { S.set.marks = !S.set.marks; save(); draw(); } }, '🎯 Alama za NECTA'), ...(S.set.marks ? Object.keys(t.terms).filter(k => PHON[k]).map(k => { const [, def, [a, b]] = PHON[k], [x, y] = [def.indexOf(a), def.indexOf(b)], parts = x < y ? [[x, a], [y, b]] : [[y, b], [x, a]]; let i = 0; const out = [h('b', {}, k[0].toUpperCase() + k.slice(1) + ' is ')]; for (const [at, ph] of parts) { out.push(def.slice(i, at), h('u', { class: 'mark' }, ph)); i = at + ph.length; } out.push(def.slice(i) + '. ', h('small', { class: 'mk' }, '(1 mark + 1 mark = 2 marks)')); return h('p', {}, out); }) : [])); draw(); return box; };
@@ -251,7 +265,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
     const mine = h('p', { contenteditable: true, 'aria-label': 'My notes', style: 'border-top:1px dashed #888;min-height:var(--line)', oninput: e => notePut(t.id, e.target.textContent) });
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
-    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
+    sheet.append(h('button', { onclick: () => ttsSpeak(t.notes.join('. ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, ''), { rate: S.set.rate }) }, '🔊 Read aloud'));
   } else if (type === 'glossary') {
     sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), PHON[k] ? h('span', { class: 'phon' }, ` [${PHON[k][0]}]`) : '', ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)), marksView());
   } else if (type === 'recall') {
@@ -417,7 +431,7 @@ function exportProgress() {
   const a = h('a', { href: URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })), download: 'progress.csv' }); a.click();
 }
 
-const CACHE_V = 'manolo-v6';
+const CACHE_V = 'manolo-v7';
 window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();

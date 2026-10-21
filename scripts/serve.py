@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Local development & neural TTS server for MANOLO Backpack.
+
+Serves static files on port 8080 (like `python3 -m http.server 8080`) and provides:
+  - GET /api/tts/status -> JSON model readiness
+  - GET /api/tts?text=... -> 16 kHz 16-bit PCM WAV synthesized via local ONNX VITS
+    model (`models/mms-tts-eng/onnx/model_quantized.onnx`, ~36.6 MB).
+
+If the model files are not yet present in `models/mms-tts-eng/`, they are
+downloaded automatically from `Xenova/mms-tts-eng` on Hugging Face.
+"""
+from __future__ import annotations
+
+import io
+import json
+import re
+import sys
+import threading
+import urllib.parse
+import wave
+from collections import OrderedDict
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+import numpy as np
+import onnxruntime as ort
+
+ROOT = Path(__file__).resolve().parent.parent
+MODEL_DIR = ROOT / "models" / "mms-tts-eng"
+ONNX_PATH = MODEL_DIR / "onnx" / "model_quantized.onnx"
+VOCAB_PATH = MODEL_DIR / "vocab.json"
+SAMPLE_RATE = 16000
+
+_LOCK = threading.Lock()
+_SESSION: ort.InferenceSession | None = None
+_VOCAB: dict[str, int] | None = None
+_CACHE: OrderedDict[str, bytes] = OrderedDict()
+_CACHE_MAX = 128
+
+_ONES = (
+    "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+    "seventeen", "eighteen", "nineteen",
+)
+_TENS = ("", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety")
+
+
+def _num_to_words(n: int) -> str:
+    if n < 0:
+        return "minus " + _num_to_words(-n)
+    if n < 20:
+        return _ONES[n]
+    if n < 100:
+        return _TENS[n // 10] + ("" if n % 10 == 0 else " " + _ONES[n % 10])
+    if n < 1000:
+        rem = n % 100
+        return _ONES[n // 100] + " hundred" + ("" if rem == 0 else " and " + _num_to_words(rem))
+    if n < 1_000_000:
+        rem = n % 1000
+        return _num_to_words(n // 1000) + " thousand" + ("" if rem == 0 else " " + _num_to_words(rem))
+    return " ".join(_ONES[int(d)] for d in str(n))
+
+
+def ensure_model() -> tuple[ort.InferenceSession, dict[str, int]]:
+    global _SESSION, _VOCAB
+    with _LOCK:
+        if _SESSION is not None and _VOCAB is not None:
+            return _SESSION, _VOCAB
+        if not ONNX_PATH.exists() or not VOCAB_PATH.exists():
+            from huggingface_hub import hf_hub_download
+            MODEL_DIR.mkdir(parents=True, exist_ok=True)
+            for fn in ("config.json", "vocab.json", "tokenizer.json", "tokenizer_config.json", "onnx/model_quantized.onnx"):
+                hf_hub_download("Xenova/mms-tts-eng", fn, local_dir=str(MODEL_DIR))
+        _VOCAB = json.loads(VOCAB_PATH.read_text(encoding="utf-8"))
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = 4
+        _SESSION = ort.InferenceSession(str(ONNX_PATH), sess_options=opts, providers=["CPUExecutionProvider"])
+        return _SESSION, _VOCAB
+
+
+_SYMBOL_MAP = (
+    ("==", " equals "),
+    ("!=", " not equal to "),
+    (">=", " greater than or equal to "),
+    ("<=", " less than or equal to "),
+    ("//", " floor divided by "),
+    ("**", " to the power of "),
+    ("->", " leads to "),
+    ("→", " leads to "),
+    ("↔", " to "),
+    ("✔", " correct "),
+    ("✘", " wrong "),
+    ("=", " equals "),
+    ("+", " plus "),
+    ("%", " modulo "),
+    ("&", " and "),
+)
+
+
+def clean_for_tts(text: str) -> str:
+    text = re.sub(r"[✏️🔊📎🇹🇿⚡🧩🎒⚙🎯👥📋🔧⚠✔✘•·]", " ", text)
+    for sym, word in _SYMBOL_MAP:
+        text = text.replace(sym, word)
+    text = re.sub(r"\b(\d+)\.(\d+)\b", lambda m: f"{_num_to_words(int(m.group(1)))} point {' '.join(_ONES[int(d)] for d in m.group(2))}", text)
+    text = re.sub(r"\b\d{1,6}\b", lambda m: _num_to_words(int(m.group(0))), text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _text_to_ids(text: str, vocab: dict[str, int]) -> list[int]:
+    lowered = text.lower().strip()
+    ids = [0]
+    for ch in lowered:
+        if ch in vocab:
+            ids.extend([vocab[ch], 0])
+    return ids
+
+
+def synthesize_wav(text: str) -> bytes:
+    cleaned = clean_for_tts(text)
+    if not cleaned:
+        cleaned = "blank"
+    if cleaned in _CACHE:
+        _CACHE.move_to_end(cleaned)
+        return _CACHE[cleaned]
+
+    sess, vocab = ensure_model()
+    clauses = [c.strip() for c in re.split(r"[.!?;:\n]+", cleaned) if c.strip()]
+    if not clauses:
+        clauses = [cleaned]
+
+    pieces: list[np.ndarray] = []
+    pause = np.zeros(int(SAMPLE_RATE * 0.14), dtype=np.float32)
+
+    for clause in clauses:
+        ids = _text_to_ids(clause, vocab)
+        if len(ids) <= 1:
+            continue
+        input_ids = np.array([ids], dtype=np.int64)
+        mask = np.ones_like(input_ids, dtype=np.int64)
+        with _LOCK:
+            out = sess.run(None, {"input_ids": input_ids, "attention_mask": mask})
+        wav = out[0].squeeze().astype(np.float32)
+        if wav.ndim == 0 or wav.size == 0:
+            continue
+        pieces.append(wav)
+        pieces.append(pause)
+
+    if not pieces:
+        full = np.zeros(int(SAMPLE_RATE * 0.2), dtype=np.float32)
+    else:
+        full = np.concatenate(pieces[:-1] if len(pieces) > 1 else pieces)
+        peak = float(np.max(np.abs(full)))
+        if peak > 1e-4:
+            full = (full / peak) * 0.88
+
+    pcm16 = np.clip(full * 32767.0, -32768, 32767).astype("<i2")
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes(pcm16.tobytes())
+    data = buf.getvalue()
+
+    _CACHE[cleaned] = data
+    if len(_CACHE) > _CACHE_MAX:
+        _CACHE.popitem(last=False)
+    return data
+
+
+class ManoloHandler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def log_message(self, fmt: str, *args) -> None:
+        pass
+
+    def do_GET(self) -> None:
+        parsed = urllib.parse.urlsplit(self.path)
+        if parsed.path == "/api/tts/status":
+            body = json.dumps({
+                "ok": True,
+                "model": "Xenova/mms-tts-eng (ONNX INT8)",
+                "sampling_rate": SAMPLE_RATE,
+                "model_present": ONNX_PATH.exists(),
+            }).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
+        if parsed.path == "/api/tts":
+            qs = urllib.parse.parse_qs(parsed.query)
+            text = (qs.get("text") or [""])[0][:1500]
+            try:
+                wav_bytes = synthesize_wav(text)
+            except Exception as exc:
+                err = json.dumps({"ok": False, "error": str(exc)}).encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Length", str(len(wav_bytes)))
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.end_headers()
+            self.wfile.write(wav_bytes)
+            return
+
+        super().do_GET()
+
+
+def main() -> None:
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    ensure_model()
+    server = ThreadingHTTPServer(("0.0.0.0", port), ManoloHandler)
+    print(f"MANOLO server + Neural TTS listening on http://localhost:{port}/")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
