@@ -15,3 +15,4 @@ for (const [src, want] of cases) test(src.slice(0, 30), () => assert.equal(runSy
 const errs = [['print(age)', 'NameError'], ['print("5"+5)', 'TypeError'], ['print(1/0)', 'ZeroDivisionError'], ['if 1:\nprint(1)', 'IndentationError'], ['print("a)', 'SyntaxError'], ['while True:\n    pass', 'LoopError'], ['int("x")', 'ValueError'], ['a=[1]\nprint(a[3])', 'IndexError']];
 for (const [src, kind] of errs) test('err ' + kind, () => { const e = runSync(src).error; assert.equal(e.kind, kind); assert.ok(e.msg.sw); });
 test('input', () => assert.equal(runSync('n=int(input("n"))\nprint(n*2)', ['21']).out, '42'));
+test('heals smart quotes', () => assert.equal(runSync('print(“Jambo”, ‘x’)').out, 'Jambo x'));

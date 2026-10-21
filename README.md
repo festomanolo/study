@@ -102,7 +102,7 @@ Students often struggle when shifting from Kiswahili to English instruction, res
 No compilation, node modules, or backend server required.
 
 1. Clone or download this repository.
-2. Double-click or open `handwritten_notebook_web_app.html` in any modern web browser (Google Chrome, Safari, Firefox, Microsoft Edge, or mobile browsers).
+2. Run `npm run serve` and open http://localhost:8080 (the app is `index.html`; serve it over HTTP so offline mode works). The original single-file notebook lives in `legacy/handwritten_notebook_web_app.html`.
 3. Interact using mouse clicks, arrow keys (`←` / `→`), or touch swipes.
 
 ---

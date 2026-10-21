@@ -14,6 +14,9 @@ export function fmt(v) {
 }
 const rep = v => typeof v === 'string' ? "'" + v + "'" : fmt(v);
 
+// Phone keyboards insert curly quotes and non-breaking spaces; treat them as plain ASCII.
+export const heal = src => src.replace(/[“”„]/g, '"').replace(/[‘’‚]/g, "'").replace(/\u00a0/g, ' ');
+
 // ---- lexer ----
 const OPS = ['**', '//', '==', '!=', '<=', '>=', '+=', '-=', '*=', '/=', '%=', '+', '-', '*', '/', '%', '<', '>', '=', '(', ')', '[', ']', ',', ':', '.'];
 export function lex(src) {
@@ -55,7 +58,7 @@ export function lex(src) {
 
 // ---- parser ----
 export function parse(src) {
-  const T = lex(src); let i = 0;
+  const T = lex(heal(src)); let i = 0;
   const pk = () => T[i], nx = () => T[i++];
   const isOp = v => pk().t === 'op' && pk().v === v;
   const isKw = v => pk().t === 'name' && pk().v === v;

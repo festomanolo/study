@@ -3,14 +3,21 @@ import { run, runSync, fmt } from './interp.js';
 import { bespoke } from './labs.js';
 import { DIAGRAMS } from './diagrams.js';
 import { makeDiagram } from './notebook.js';
+import { PHON, TRAPS, GIST, SHORT, markShort } from './micro.js';
 const $ = document.getElementById('app'), live = document.getElementById('live');
 const h = (t, a = {}, ...k) => { const e = document.createElement(t); for (const [n, v] of Object.entries(a)) n.startsWith('on') ? e.addEventListener(n.slice(2), v) : n === 'class' ? e.className = v : v !== false && e.setAttribute(n, v === true ? '' : v); for (const c of k.flat()) if (c != null) e.append(c); return e; };
 const say = m => { live.textContent = ''; setTimeout(() => live.textContent = m, 30); };
 
 // ---- store (versioned) ----
-const KEY = 'manolo.v1', DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9, ink: 0, light: 88 }, page: {}, edits: {}, lab: {}, quiz: {}, name: '', seen: false, last: {} };
-let S; try { S = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); }
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+// Shared-phone learners: '' is the first learner (key manolo.v1); others live in manolo.v1.<name>.
+const DEF = { v: 1, set: { sw: true, reduce: false, readable: false, fs: 1, quality: 'auto', rate: 0.9, ink: 0, light: 88, marks: false, group: 1 }, page: {}, edits: {}, lab: {}, quiz: {}, dates: {}, dogear: {}, name: '', school: '', seen: false, last: {} };
+const keyOf = n => n ? 'manolo.v1.' + n : 'manolo.v1', ls = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch {} };
+let profiles = [], active = ''; try { profiles = JSON.parse(ls('manolo.profiles') || '[]'); active = ls('manolo.active') || ''; } catch {}
+let S; function load() { try { S = { ...structuredClone(DEF), ...JSON.parse(ls(keyOf(active)) || '{}') }; S.set = { ...DEF.set, ...S.set }; } catch { S = structuredClone(DEF); } }
+load();
+const save = () => ls(keyOf(active), JSON.stringify(S));
+const nameOf = id => id || (() => { try { return JSON.parse(ls('manolo.v1') || '{}').name; } catch {} })() || 'Learner 1';
+function switchProfile(id) { save(); active = id; ls('manolo.active', id); load(); applySettings(); }
 const INKS = [['#1b387b', '#1e232a', 'Bic Blue'], ['#23272e', '#0f172a', 'Gel Black'], ['#2e1f6e', '#1c1917', 'Indigo']];
 function applySettings() {
   const r = document.documentElement;
@@ -33,8 +40,9 @@ function spring(from, to, cb, k = 180, c = 18) { let x = from, v = 0, stop = fal
 
 // ---- notes in IndexedDB (localStorage fallback) ----
 const idb = new Promise(r => { try { const q = indexedDB.open('manolo', 1); q.onupgradeneeded = () => q.result.createObjectStore('notes'); q.onsuccess = () => r(q.result); q.onerror = () => r(null); } catch { r(null); } });
-const noteGet = async id => { const d = await idb; if (!d) return S.mine?.[id] || ''; return new Promise(r => { const q = d.transaction('notes').objectStore('notes').get(id); q.onsuccess = () => r(q.result || ''); q.onerror = () => r(''); }); };
-const notePut = async (id, v) => { const d = await idb; if (!d) { (S.mine ||= {})[id] = v; return save(); } d.transaction('notes', 'readwrite').objectStore('notes').put(v, id); };
+const noteKey = id => (active ? active + ':' : '') + id;
+const noteGet = async id0 => { const id = noteKey(id0); const d = await idb; if (!d) return S.mine?.[id] || ''; return new Promise(r => { const q = d.transaction('notes').objectStore('notes').get(id); q.onsuccess = () => r(q.result || ''); q.onerror = () => r(''); }); };
+const notePut = async (id0, v) => { const id = noteKey(id0); const d = await idb; if (!d) { (S.mine ||= {})[id] = v; return save(); } d.transaction('notes', 'readwrite').objectStore('notes').put(v, id); };
 
 // ---- model ----
 // Split long notes at "## " headings so each page holds about one screen of text.
@@ -102,8 +110,10 @@ function bag() {
   pull.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'Enter') set(p + .25), p > .85 && settle(); if (e.key === 'ArrowLeft') set(p - .25); });
   function open() { go(`#/cs/${level}`); }
   const lv = h('div', { class: 'tag' }, ...['f1', 'f2'].map(f => h('button', { class: f === level ? 'on' : '', onclick: () => { level = f; lv.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', ['f1', 'f2'][i] === level)); } }, form(f).title)));
+  const badge = h('div', { class: 'bando', role: 'status' }, '⏳ Preparing offline… / Inaandaa');
+  (async () => { try { if (navigator.serviceWorker?.controller && await caches.has(CACHE_V)) { badge.textContent = '🟢 Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando'; badge.classList.add('ok'); } } catch {} })();
   const cont = S.last.f ? h('button', { class: 'pri', onclick: () => go(`#/cs/${S.last.f}/p/${S.last.n}`) }, 'Continue where you left off') : null;
-  scene(h('h1', { style: 'margin:0;font-family:var(--hand)' }, 'MANOLO Backpack'), lv, bagEl, h('button', { onclick: () => set(p > .5 ? 0 : 1) }, 'Zip / Unzip (button)'), cont, h('small', {}, 'Drag the zipper, then pick a notebook. Buruta zipu kisha chagua daftari.'));
+  scene(h('h1', { style: 'margin:0;font-family:var(--hand)' }, 'MANOLO Backpack'), badge, lv, bagEl, h('button', { onclick: () => set(p > .5 ? 0 : 1) }, 'Zip / Unzip (button)'), cont, h('small', {}, 'Drag the zipper, then pick a notebook. Buruta zipu kisha chagua daftari.'));
 }
 
 // ---- original hardware notebook (legacy), embedded with its simulators ----
@@ -114,7 +124,13 @@ function hardware() {
 // ---- cover ----
 function cover(f) {
   let r = 0, dragging = false, x0 = 0;
-  const lid = h('div', { class: 'lid', tabindex: 0, role: 'button', 'aria-label': 'Open notebook' }, h('small', {}, 'Syllabus: TIE 2023'), h('h2', {}, 'Computer Science'), h('div', {}, form(f).title), h('label', {}, 'Name: ', h('input', { value: S.name, 'aria-label': 'Student name', onclick: e => e.stopPropagation(), oninput: e => { S.name = e.target.value; save(); } })), h('small', {}, 'Tap or drag to open'));
+  const stop = e => e.stopPropagation(), keep = { onclick: stop, onpointerdown: stop, onkeydown: stop };
+  const field = (l, k) => h('label', {}, h('b', {}, l), h('input', { value: S[k] || '', 'aria-label': l, oninput: e => { S[k] = e.target.value; save(); } }));
+  const add = h('input', { placeholder: '+ Add learner', 'aria-label': 'Add learner name', onkeydown: e => { const n = add.value.trim().replace(/[^\w\- ]/g, ''); if (e.key !== 'Enter' || !n || profiles.includes(n)) return; profiles.push(n); ls('manolo.profiles', JSON.stringify(profiles)); switchProfile(n); S.name = n; save(); route(); } });
+  const who = h('div', { class: 'who', ...keep }, h('small', {}, 'Who is studying? / Nani anasoma?'), ['', ...profiles].map(id => h('button', { class: id === active ? 'on' : '', onclick: () => { if (id === active) return; switchProfile(id); chime(600, .05); route(); } }, nameOf(id))), add);
+  const lid = h('div', { class: 'lid counter', tabindex: 0, role: 'button', 'aria-label': 'Open notebook' }, h('i', { class: 'spine' }),
+    h('div', { class: 'label', ...keep }, h('small', {}, 'COUNTER BOOK · 2 QUIRE'), field('JINA / NAME: ', 'name'), h('div', {}, h('b', {}, 'SOMO / SUBJECT: '), 'Computer Science'), h('div', {}, h('b', {}, 'KIDATO / FORM: '), form(f).title), field('SHULE / SCHOOL: ', 'school')),
+    who, h('small', { class: 'hint' }, 'Tap or drag to open · TIE 2023 syllabus'));
   const setR = v => { r = v; lid.style.setProperty('--r', v + 'deg'); };
   const finish = () => { if (reduced()) return go(`#/cs/${f}/toc`); spring(r, -165, setR, 120, 14); setTimeout(() => go(`#/cs/${f}/toc`), 450); chime(500, .1); };
   lid.onclick = () => { if (!dragging) finish(); };
@@ -128,6 +144,8 @@ function cover(f) {
 // ---- contents ----
 function toc(f) {
   const pgs = pagesOf(f), sheet = h('div', { class: 'sheet toc' }, h('h2', {}, `Yaliyomo / Contents — ${form(f).title}`));
+  const ears = pgs.map((x, i) => [x, i]).filter(([x]) => S.dogear[x.id]);
+  if (ears.length) sheet.append(h('h3', {}, '📑 Folded corners / Kurasa zilizokunjwa'), ...ears.map(([x, i]) => h('button', { class: 'row', onclick: () => riffle(f, i) }, h('span', { class: 'tick' }, '◥'), x.t ? `${x.t.title} · ${x.type}` : 'Checkpoint', h('span', { class: 'dots' }), 'p.' + (i + 1))));
   for (const u of form(f).units) {
     sheet.append(h('h3', {}, `${u.id} ${u.title} (${u.periods} periods) `, h('small', {}, unitPct(u) + '%')), h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': unitPct(u) }, h('i', { style: `width:${unitPct(u)}%` })));
     for (const t of u.topics) {
@@ -149,7 +167,7 @@ function riffle(f, n) {
 // ---- pages ----
 function pageScene(f, n, ghost = false) {
   const pgs = pagesOf(f); n = Math.max(0, Math.min(pgs.length - 1, n)); const pg = pgs[n];
-  if (!ghost) { S.last = { f, n }; S.page[pg.id] = 1; save(); }
+  if (!ghost) { S.last = { f, n }; S.page[pg.id] = 1; S.dates[pg.id] ||= new Date().toLocaleDateString('en-GB'); save(); }
   const sheet = h('div', { class: 'sheet' + (reduced() ? '' : ' flip'), tabindex: 0 });
   const pencil = h('div', { class: 'pencil', hidden: true, role: 'status' });
   if (pg.kind === 'cp') checkpoint(sheet, pg.u);
@@ -167,6 +185,13 @@ function pageScene(f, n, ghost = false) {
   };
   const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
   const clip = h('button', { class: 'clip', onclick: talk, title: 'Tap to hear Mwalimu', 'aria-label': 'Hear Mwalimu' }, h('span', {}, '📎'));
+  let wl = null; const copyOff = () => { sheet.classList.remove('copymode'); copyBtn.classList.remove('on'); wl?.release?.().catch(() => {}); wl = null; };
+  const copyBtn = h('button', { title: 'Number the lines and keep the screen on while you copy into your exercise book', onclick: async () => {
+    if (sheet.classList.contains('copymode')) return copyOff();
+    sheet.classList.add('copymode'); copyBtn.classList.add('on'); pencil.hidden = true;
+    const lh = parseFloat(getComputedStyle(sheet).lineHeight) || 28, lines = Math.round(sheet.scrollHeight / lh);
+    say(`Copy mode: about ${(lines / 32).toFixed(1)} Counter Book pages. Screen stays on.`); copyBtn.textContent = `✍ ≈ ${(lines / 32).toFixed(1)} pages`;
+    try { wl = await navigator.wakeLock?.request('screen'); } catch {} } }, '✍ Nakili Daftarini');
   const editable = type => type.startsWith('notes'), blocksOf = () => [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > ul > li')];
   const saved = S.edits[pg.id]; if (saved) blocksOf().forEach((b, k) => { if (saved[k] != null) b.textContent = saved[k]; });
   let editing = false; const edit = h('button', { onclick: () => { editing = !editing; sheet.classList.toggle('editing', editing); edit.classList.toggle('on', editing); blocksOf().forEach((b, k) => { b.contentEditable = editing; b.oninput = () => { (S.edits[pg.id] ||= {})[k] = b.textContent; save(); }; }); say(editing ? 'Edit mode on: tap any line and type.' : 'Edit mode off.'); }, disabled: !editable(pg.type || '') }, h('i', { class: 'dot' }), 'Edit');
@@ -178,13 +203,16 @@ function pageScene(f, n, ghost = false) {
     h('button', { class: S.set.sw ? 'on' : '', onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }, '🇹🇿 Fafanua'),
     h('button', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }, '⚡ Data Flow'),
     h('button', { onclick: withDiagram('recall'), disabled: !want, title: 'Hide the labels and put them back' }, '🧩 Active Recall'),
-    voice, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
+    voice, copyBtn, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
     h('button', { onclick: () => go('#/bag'), 'aria-label': 'Backpack' }, '🎒'));
 
-  scene(spread(sheet, clip), tray, hud, nav);
+  const ear = h('button', { class: 'dogear' + (S.dogear[pg.id] ? ' on' : ''), 'aria-label': 'Fold page corner for revision', 'aria-pressed': !!S.dogear[pg.id], onclick() { if (S.dogear[pg.id]) delete S.dogear[pg.id]; else S.dogear[pg.id] = 1; save(); this.classList.toggle('on'); this.setAttribute('aria-pressed', !!S.dogear[pg.id]); chime(420, .04); say(S.dogear[pg.id] ? 'Corner folded. Listed in Contents.' : 'Corner unfolded.'); } });
+  const datebox = h('div', { class: 'datebox' }, 'Date: ', h('span', { class: 'pen' }, S.dates[pg.id] || '__/__/____'), h('br'), 'Page No. ', h('span', { class: 'pen' }, n + 1));
+  const sp = spread(sheet, clip); sp.querySelector('.pages').append(ear, datebox);
+  scene(sp, tray, hud, nav);
   applyJitter(sheet);
   if (dg && !ghost) { let p; try { p = sessionStorage.getItem('manolo.pending'); sessionStorage.removeItem('manolo.pending'); } catch {} if (p) setTimeout(() => p === 'sim' ? dg.sim(hud) : dg.recall(tray), 350); }
-  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); dg?.destroy(); stopTalk(); }; }
+  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); dg?.destroy(); stopTalk(); copyOff(); }; }
 }
 function diagramBlock(sheet, t, pencil) {
   const dg = makeDiagram(DIAGRAMS[t.id], { chime, say, onInfo: (label, info) => { pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + label), h('br'), info); } });
@@ -203,11 +231,20 @@ function block(n, rich) {
 }
 function renderPage(sheet, { type, t, u }, pencil) {
   sheet.append(h('span', { class: 'code-tag' }, t.code), h('h2', {}, t.title + (S.set.sw ? ` · ${t.sw}` : '')));
-  const term = k => { const d = t.terms[k.toLowerCase()]; return h('button', { class: 'term', onclick: () => { if (!S.set.sw) return; pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + k + ' = ' + d[0]), h('br'), d[1], h('br'), h('i', {}, 'NECTA: ' + d[2])); chime(520, .05); } }, k); };
+  if (topicDone(t)) sheet.append(h('div', { class: 'seen', 'aria-label': 'Checked by teacher' }, '✓ Seen', h('br'), 'Mwl. Manolo', h('br'), h('small', {}, S.dates[`${t.id}.practice`] || '')));
+  const speak = w => { try { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(w); m.lang = 'en-GB'; m.rate = .7; speechSynthesis.speak(m); } catch {} };
+  const term = k => { const d = t.terms[k.toLowerCase()], ph = PHON[k.toLowerCase()]; return h('button', { class: 'term', onclick: e => { e.stopPropagation(); if (!S.set.sw) return; pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + k + ' = ' + d[0]), ph ? h('span', { class: 'phon' }, ` [${ph[0]}] `) : '', ph ? h('button', { class: 'chip', onclick: () => speak(k) }, '🔊 Tamka') : '', h('br'), d[1], h('br'), h('i', {}, 'NECTA: ' + d[2])); chime(520, .05); } }, k); };
+  const trap = () => TRAPS[t.id] && h('div', { class: 'trap', role: 'note' }, h('b', {}, '⚠ Mtego wa Mtihani / Exam Trap'), h('p', {}, rich(TRAPS[t.id][0])), S.set.sw ? h('p', {}, h('i', {}, TRAPS[t.id][1])) : null);
+  const marksView = () => { const box = h('div', { class: 'marks' }); const draw = () => box.replaceChildren(h('button', { class: 'chip' + (S.set.marks ? ' sel' : ''), onclick: () => { S.set.marks = !S.set.marks; save(); draw(); } }, '🎯 Alama za NECTA'), ...(S.set.marks ? Object.keys(t.terms).filter(k => PHON[k]).map(k => { const [, def, [a, b]] = PHON[k], [x, y] = [def.indexOf(a), def.indexOf(b)], parts = x < y ? [[x, a], [y, b]] : [[y, b], [x, a]]; let i = 0; const out = [h('b', {}, k[0].toUpperCase() + k.slice(1) + ' is ')]; for (const [at, ph] of parts) { out.push(def.slice(i, at), h('u', { class: 'mark' }, ph)); i = at + ph.length; } out.push(def.slice(i) + '. ', h('small', { class: 'mk' }, '(1 mark + 1 mark = 2 marks)')); return h('p', {}, out); }) : [])); draw(); return box; };
+  if (S.set.sw && type.startsWith('notes')) sheet.addEventListener('click', e => {
+    const p = e.target.closest('p,li'); if (!p || p.parentElement === null || e.target.closest('button,input,textarea,.codeblock') || p.isContentEditable || sheet.classList.contains('copymode')) return;
+    sheet.querySelector('.whisper')?.remove(); const txt = p.textContent.toLowerCase(), hits = Object.entries(t.terms).filter(([k]) => txt.includes(k)).map(([k, d]) => `${k} = ${d[0]}`);
+    p.after(h('div', { class: 'whisper', role: 'note' }, '🇹🇿 ', GIST[t.id] || '', hits.length ? h('small', {}, hits.join(' · ')) : null)); });
   const rich = s => s.split(/(\[\[.+?\]\]|`.+?`)/).map(x => x.startsWith('[[') ? term(x.slice(2, -2)) : x.startsWith('`') ? h('span', { class: 'code' }, x.slice(1, -1)) : x);
   if (type.startsWith('notes')) {
     const part = +type.slice(5) || 0, total = noteParts(t).length;
     if (part === 0 && t.hook) sheet.append(h('p', { class: 'callout try' }, `Think: ${t.hook}`));
+    if (part === 0 && TRAPS[t.id]) sheet.append(trap());
     noteChunk(t, part).forEach((n, i) => { sheet.append(block(n, rich)); if (part === 0 && i === 0 && DIAGRAMS[t.id]) sheet.append(diagramBlock(sheet, t, pencil)); });
     if (total > 1) sheet.append(h('small', {}, `Notes ${part + 1}/${total}`));
     if (part < total - 1) return;
@@ -215,10 +252,8 @@ function renderPage(sheet, { type, t, u }, pencil) {
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
     if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
-  } else if (type === 'hook') {
-    sheet.append(h('p', {}, h('b', {}, 'Hook · '), t.hook || t.notes.find(n => !/^(##|-|```)/.test(n)).replace(/\[\[|\]\]/g, '')), h('p', {}, h('i', {}, 'Think: where have you seen this in daily life? Tazama maisha ya kila siku.')));
   } else if (type === 'glossary') {
-    sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)));
+    sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), PHON[k] ? h('span', { class: 'phon' }, ` [${PHON[k][0]}]`) : '', ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)), marksView());
   } else if (type === 'recall') {
     sheet.append(h('p', {}, h('b', {}, 'Quick recall: tap a keyword, say the term aloud, tap again to check.')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('button', { class: 'chip', onclick() { this.textContent = this.textContent === d[2] ? k : d[2]; } }, d[2]))));
   } else if (type === 'lab' || type === 'lab2') {
@@ -226,15 +261,19 @@ function renderPage(sheet, { type, t, u }, pencil) {
   } else if (type === 'practice') {
     quiz(sheet, t.id, t.quiz);
   } else {
-    sheet.append(h('p', {}, h('b', {}, 'Key points / Mambo muhimu')), ...t.summary.map(s => h('p', {}, '• ' + s)), h('p', {}, h('b', {}, 'NECTA keywords: '), Object.values(t.terms).map(d => d[2]).join('; ')));
+    sheet.append(h('p', {}, h('b', {}, 'Key points / Mambo muhimu')), ...t.summary.map(s => h('p', {}, '• ' + s)), h('p', {}, h('b', {}, 'NECTA keywords: '), Object.values(t.terms).map(d => d[2]).join('; ')), trap(), marksView());
   }
 }
 
 // ---- quiz & red pen ----
 const redMark = good => { const e = h('span', { class: 'redpen ' + (good ? 'ok' : 'no'), 'aria-label': good ? 'correct' : 'wrong' }); e.innerHTML = `<svg viewBox="0 0 24 24"><path d="${good ? 'M4 12l6 6L20 6' : 'M6 6l12 12M6 18L18 6'}"/></svg>`; return e; };
 function quiz(host, id, qs, extra) {
-  const form_ = h('div', {}), res = h('div', { 'aria-live': 'polite' });
-  qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
+  const form_ = h('div', {}), res = h('div', { 'aria-live': 'polite' }), turns = [];
+  const setTurns = () => turns.forEach((el, i) => el.textContent = S.set.group > 1 ? ` 👥 Swali la ${i + 1} · Mwanafunzi ${'ABCD'[i % S.set.group]}` : '');
+  const grp = h('button', { class: 'chip', title: 'Pass-the-phone: friends take turns, one question each', onclick: () => { S.set.group = S.set.group % 4 + 1; save(); grp.textContent = `👥 Kikundi: ${S.set.group}`; setTurns(); } }, `👥 Kikundi: ${S.set.group}`);
+  host.append(grp);
+  qs.forEach(([q, o, a], i) => form_.append(h('div', { class: 'q' }, h('b', {}, `${i + 1}. ${q}`), turns[i] = h('small', { class: 'turn' }), ...o.map((x, j) => h('label', {}, h('input', { type: 'radio', name: `${id}${i}`, value: j }), ' ' + x)), h('span', { id: `${id}r${i}` }))));
+  setTurns();
   host.append(form_, h('button', { class: 'pri', onclick: () => {
     let ok = 0;
     qs.forEach(([, o, a], i) => { const v = form_.querySelector(`input[name="${id}${i}"]:checked`), good = v && +v.value === a; ok += good ? 1 : 0; form_.querySelector(`#${CSS.escape(id)}r${i}`).replaceChildren(redMark(!!good), good ? '' : h('span', { class: 'no pen-fix' }, ` → ${o[a]}`)); });
@@ -247,6 +286,10 @@ function quiz(host, id, qs, extra) {
 function checkpoint(sheet, u) {
   sheet.append(h('h2', {}, `Checkpoint — ${u.title}`), h('p', {}, h('small', {}, 'Practice material in NECTA style. Not an official paper.')));
   const qs = u.topics.flatMap(t => t.quiz); quiz(sheet, u.id, qs);
+  for (const [i, sq] of (SHORT[u.id] || []).entries()) {
+    const ta = h('textarea', { 'aria-label': 'Your answer', rows: 3 }), out = h('div', { 'aria-live': 'polite' });
+    sheet.append(h('div', { class: 'lab' }, h('b', {}, `Section B · Q${i + 1}: `), sq.q, ta, h('button', { onclick: () => { const got = markShort(ta.value, sq.keys), sc = got.filter(Boolean).length; S.quiz[`${u.id}.sa${i}`] = Math.max(S.quiz[`${u.id}.sa${i}`] || 0, sc / got.length); save(); out.replaceChildren(...got.map((g, j) => h('div', {}, redMark(g), ` Mark ${j + 1}: ${g ? 'awarded' : 'missing — e.g. "' + sq.keys[j][0] + '"'}`)), h('span', { class: 'score' }, `${sc}/${got.length}`)); chime(sc === got.length ? 880 : 300, .2); } }, 'Sahihisha / Mark'), out));
+  }
   for (const [i, cq] of (codeQs[u.id] || []).entries()) {
     const ta = h('textarea', { 'aria-label': 'Your code', spellcheck: false }), out = h('div', {});
     sheet.append(h('div', { class: 'lab' }, h('b', {}, `Code Q${i + 1}: `), cq.prompt, ta, h('button', { onclick: () => { out.replaceChildren(...cq.tests.map((t, j) => { const r = runSync(ta.value, [...t.in]), good = !r.error && r.out === t.out; if (good) S.lab[`${u.id}.cq${i}.${j}`] = 1; return h('div', { class: good ? 'ok' : 'no' }, `${good ? '✔' : '✘'} test ${j + 1}: input ${t.in.join(', ')} → expected ${t.out}${good ? '' : ` got ${r.error ? r.error.msg.en : JSON.stringify(r.out)}`}`); })); save(); } }, 'Run tests'), out));
@@ -296,32 +339,50 @@ function lab(t0, two) {
 }
 
 function consoleLab(box, t) {
-  const L = t.lab, ta = h('textarea', { spellcheck: false, 'aria-label': 'Code editor' }, L.code), out = h('div', { class: 'out', 'aria-live': 'off' }), boxes = h('div', { class: 'boxes' }), view = h('div', { class: 'codeview', hidden: true });
+  const L = t.lab, ta = h('textarea', { spellcheck: false, autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', 'aria-label': 'Code editor' }, L.code), out = h('div', { class: 'out', 'aria-live': 'off' }), boxes = h('div', { class: 'boxes' }), view = h('div', { class: 'codeview', hidden: true });
   const vars = new Map(); let gen = null, pending = null, timer = null;
-  const keys = h('div', { class: 'keys' }, [':', '(', ')', '"', '=', '[', ']', '    '].map(k => h('button', { onclick: () => { const s = ta.selectionStart; ta.setRangeText(k, s, ta.selectionEnd, 'end'); ta.focus(); } }, k === '    ' ? 'Tab' : k)));
+  const keys = h('div', { class: 'keys' }, [':', '(', ')', '"', '=', '==', '>=', '<=', '!=', '[', ']', '_', '#', '+', 'print()', 'input()', '    '].map(k => h('button', { onclick: () => { const s = ta.selectionStart; ta.setRangeText(k, s, ta.selectionEnd, 'end'); if (k.endsWith('()')) ta.selectionStart = ta.selectionEnd = ta.selectionEnd - 1; ta.focus(); heal(); } }, k === '    ' ? 'Tab' : k)));
+  // Phone keyboards: curly quotes are fixed silently; auto-capitals get a one-tap fix.
+  const CAPS = /\b(Print|Input|If|Elif|Else|For|While|Range|Int|Float|Str|Len)\b/, capsFix = h('div', { class: 'capsfix', hidden: true });
+  const outsideStrings = (src, f) => src.split(/("[^"\n]*"|'[^'\n]*')/).map((x, i) => i % 2 ? x : f(x)).join('');
+  function heal() {
+    if (/[“”„‘’‚\u00a0]/.test(ta.value)) { const p = ta.selectionStart; ta.value = ta.value.replace(/[“”„]/g, '"').replace(/[‘’‚]/g, "'").replace(/\u00a0/g, ' '); ta.selectionStart = ta.selectionEnd = p; }
+    const hit = outsideStrings(ta.value, x => { const m = x.match(CAPS); return m ? '\0' + m[1] + '\0' : ''; }).match(/\0(\w+)\0/);
+    capsFix.hidden = !hit; if (hit) capsFix.replaceChildren(`📱 Simu imeweka herufi kubwa "${hit[1]}". Rekebisha iwe "${hit[1].toLowerCase()}"? `, h('button', { class: 'chip', onclick: () => { ta.value = outsideStrings(ta.value, x => x.replace(new RegExp(CAPS.source, 'g'), w => w.toLowerCase())); heal(); chime(700, .05); } }, '🔧 Fix Auto-Caps'));
+  }
+  ta.addEventListener('input', heal);
+  // Dry-run scratchpad: predict each step, then Run compares with the real trace.
+  const trace = [], tbody = h('tbody', {}), tableWrap = h('div', { class: 'tracepad', hidden: true });
+  const addRow = () => tbody.append(h('tr', {}, h('td', {}, tbody.children.length + 1), h('td', {}, h('input', { 'aria-label': 'Variables after step' })), h('td', {}, h('input', { 'aria-label': 'Printed output' })), h('td', { class: 'res' })));
+  for (let i = 0; i < 6; i++) addRow();
+  tableWrap.append(h('small', {}, 'Write what you expect after each step (e.g. age=15), then press ▶ Run.'), h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Step'), h('th', {}, 'Variables'), h('th', {}, 'Output'), h('th', {}, ''))), tbody), h('button', { class: 'chip', onclick: addRow }, '+ row'));
+  const norm = x => String(x).toLowerCase().replace(/[\s'"]/g, '');
+  const compare = () => { if (tableWrap.hidden) return; [...tbody.children].forEach((tr, i) => { const [vi, oi] = tr.querySelectorAll('input'), want = trace[i], res = tr.querySelector('.res'); if (!want) return res.replaceChildren(vi.value || oi.value ? redMark(false) : ''); const ok = norm(vi.value) === norm(want[0]) && norm(oi.value) === norm(want[1]); res.replaceChildren(redMark(ok), ok ? '' : h('small', { class: 'no' }, `${want[0]} | ${want[1] || '—'}`)); }); };
+  const traceBtn = h('button', { onclick: () => { tableWrap.hidden = !tableWrap.hidden; traceBtn.classList.toggle('on', !tableWrap.hidden); } }, '📋 Kikaratasi cha Trace');
   ta.onkeydown = e => { if (e.key === 'Tab') { e.preventDefault(); ta.setRangeText('    ', ta.selectionStart, ta.selectionEnd, 'end'); } if (e.key === 'Enter') { const s = ta.value.slice(0, ta.selectionStart), l = s.slice(s.lastIndexOf('\n') + 1), ind = l.match(/^ */)[0] + (l.trimEnd().endsWith(':') ? '    ' : ''); e.preventDefault(); ta.setRangeText('\n' + ind, ta.selectionStart, ta.selectionEnd, 'end'); } };
-  const reset = () => { clearTimeout(timer); gen = null; pending = null; vars.clear(); out.replaceChildren(); boxes.replaceChildren(); view.hidden = true; };
+  const reset = () => { clearTimeout(timer); gen = null; pending = null; vars.clear(); trace.length = 0; out.replaceChildren(); boxes.replaceChildren(); view.hidden = true; };
   const mark = n => { view.querySelectorAll('div').forEach((d, i) => d.classList.toggle('cur', i + 1 === n)); };
-  function start() { reset(); gen = run(ta.value); view.replaceChildren(...ta.value.split('\n').map((l, i) => h('div', {}, `${String(i + 1).padStart(2)}  ${l}`))); view.hidden = false; }
+  function start() { heal(); reset(); gen = run(ta.value); view.replaceChildren(...ta.value.split('\n').map((l, i) => h('div', {}, `${String(i + 1).padStart(2)}  ${l}`))); view.hidden = false; }
   function advance(stopAtLine, val) {
     for (let guard = 0; gen && guard < 100000; guard++) {
       const r = gen.next(val); val = undefined;
       if (r.done) { gen = null; return false; }
       const e = r.value;
-      if (e.t === 'print') out.append(e.text + '\n');
-      else if (e.t === 'assign') { const old = vars.get(e.name); vars.set(e.name, e); boxes.replaceChildren(...[...vars].map(([n, v]) => h('div', { class: 'vbox' }, h('small', {}, n + ' : ' + v.typ), fmt(v.value)))); void old; }
+      const snap = () => [...vars].map(([n, v]) => `${n}=${fmt(v.value)}`).join(', ');
+      if (e.t === 'print') { out.append(e.text + '\n'); trace.push([snap(), e.text]); }
+      else if (e.t === 'assign') { const old = vars.get(e.name); vars.set(e.name, e); trace.push([snap(), '']); boxes.replaceChildren(...[...vars].map(([n, v]) => h('div', { class: 'vbox' }, h('small', {}, n + ' : ' + v.typ), fmt(v.value)))); void old; }
       else if (e.t === 'input') { const i = h('input', { 'aria-label': e.prompt || 'input' }), form2 = h('form', { onsubmit: ev => { ev.preventDefault(); out.append(i.value + '\n'); form2.remove(); advance(stopAtLine, i.value); } }, e.prompt + ' ', i, h('button', {}, 'OK')); out.append(form2); i.focus(); return true; }
       else if (e.t === 'error') { out.append(h('div', { class: 'e' }, `${e.kind} (line ${e.line}): ${e.msg.en}`, S.set.sw ? h('i', {}, ` — ${e.msg.sw}`) : '')); mark(e.line); gen = null; return false; }
-      else if (e.t === 'done') { gen = null; mark(0); done(t); return false; }
+      else if (e.t === 'done') { gen = null; mark(0); compare(); done(t); return false; }
       else if (e.t === 'line') { mark(e.line); if (stopAtLine) return true; }
     }
     return false;
   }
   const runAll = () => { start(); advance(false); if (gen === null && !out.querySelector('.e')) done(t); };
-  box.append(h('p', {}, L.task || ''), keys, ta, h('div', { class: 'nav' },
+  box.append(h('p', {}, L.task || ''), keys, capsFix, ta, h('div', { class: 'labnav' },
     h('button', { class: 'pri', onclick: runAll }, '▶ Run'),
     h('button', { onclick: () => { if (!gen) start(); advance(true); } }, 'Step'),
-    h('button', { onclick: reset }, 'Reset')), view, h('b', {}, 'Variable Boxes'), boxes, out);
+    h('button', { onclick: reset }, 'Reset'), traceBtn), tableWrap, view, h('b', {}, 'Variable Boxes'), boxes, out);
 }
 
 // ---- demo mode (#/demo): scripted tour for presenters ----
@@ -356,6 +417,8 @@ function exportProgress() {
   const a = h('a', { href: URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })), download: 'progress.csv' }); a.click();
 }
 
+const CACHE_V = 'manolo-v5';
+window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').then(r => r.addEventListener('updatefound', () => r.installing.addEventListener('statechange', function () { if (this.state === 'installed' && navigator.serviceWorker.controller) document.body.append(h('button', { class: 'pri', style: 'position:fixed;bottom:8px;right:8px;z-index:8', onclick: () => location.reload() }, 'New lessons available — tap to refresh')); }))).catch(() => {});

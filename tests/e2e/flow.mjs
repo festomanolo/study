@@ -1,15 +1,24 @@
-// Run: npm run serve (in another shell), then npm run e2e   (needs `playwright` installed)
+// Run: npm run serve (in another shell), then npm run e2e   (needs `playwright`; set CHROMIUM=/path to reuse a browser)
 import { chromium } from 'playwright';
 const url = process.env.URL || 'http://localhost:8080/';
 const b = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), p = await b.newPage({ viewport: { width: 390, height: 844 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message));
 const ok = (c, m) => { if (!c) { console.error('FAIL', m); process.exitCode = 1; } else console.log('ok', m); };
+const pageOf = (f, pred) => p.evaluate(([f, pred]) => window.__manolo.pagesOf(f).findIndex(new Function('x', 'return ' + pred)), [f, pred]);
 await p.goto(url); await p.waitForSelector('.bag');
 await p.focus('.pull'); for (let i = 0; i < 4; i++) await p.keyboard.press('ArrowRight');
-await p.waitForTimeout(800); await p.click('.book:not(.soon)'); await p.click('.lid h2'); await p.waitForSelector('.toc');
-await p.click('text=Variables, data types'); await p.waitForTimeout(1200); await p.click('button[aria-label="Next page"]');
-await p.waitForSelector('textarea'); await p.click('button.pri');
+await p.waitForTimeout(800); await p.click('.book:not(.soon)'); await p.click('.lid .hint'); await p.waitForSelector('.toc');
+await p.click('text=Variables, data types'); await p.waitForTimeout(1200);
+const lab = await pageOf('f2', "x.t?.id === 'vars' && x.type === 'lab'"); await p.goto(url + '#/cs/f2/p/' + lab); await p.waitForSelector('textarea'); if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
+await p.click('button.pri:text-is("▶ Run")');
 ok((await p.textContent('.out')).includes('Total TZS 1500'), 'interpreter output');
 ok(await p.locator('.vbox').count() === 3, 'variable boxes');
+await p.fill('textarea', 'Print(“Jambo”)'); await p.waitForSelector('.capsfix:not([hidden])'); await p.click('text=🔧 Fix Auto-Caps');
+ok(await p.inputValue('textarea') === 'print("Jambo")', 'auto-healer fixes caps and smart quotes');
+await p.fill('textarea', 'a = 2\nprint(a)'); await p.click('text=📋 Kikaratasi cha Trace');
+const cells = p.locator('.tracepad input'); await cells.nth(0).fill('a=2'); await cells.nth(2).fill('a=2'); await cells.nth(3).fill('2');
+await p.click('button.pri:text-is("▶ Run")'); ok(await p.locator('.tracepad .redpen.ok').count() === 2, 'trace scratchpad compares predictions');
+await p.click('.dogear'); await p.goto(url + '#/cs/f2/toc'); await p.waitForSelector('.toc'); ok(await p.locator('text=Folded corners').count() === 1, 'dog-ear listed in contents');
+ok(/\d\d\/\d\d\/\d{4}/.test(await (await p.goto(url + '#/cs/f2/p/' + lab), p.waitForSelector('.datebox'), p.textContent('.datebox'))), 'date stamp');
 await p.goto(url + '#/cs/f1/p/0'); await p.waitForSelector('.sheet'); ok(true, 'deep link');
 ok(!errs.length, 'no page errors ' + errs); await b.close();
