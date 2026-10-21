@@ -73,7 +73,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - **Micro-UX**: On the notebook cover right below `Name:`, show small clickable name pills (`[+ Add Learner]` / `[Asha]` / `[Juma]`). Switching learners swaps the active profile slot in `localStorage` (`manolo.v1.<profile>`) in 1 tap with zero passwords or internet.
 11. **"0 MB Bando Used" Offline Shield Badge (`bag()` in `app.js` line 85)**:
     - **Why**: Parents hesitate to hand over their phone if they think an app is secretly consuming their mobile data bundle (*bando*).
-    - **Micro-UX**: Show a persistent green badge on the backpack (`🟢 Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando`) that confirms when the Service Worker cache (`manolo-v4`) is active.
+    - **Micro-UX**: Show a persistent green badge on the backpack (`Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando`) that confirms when the Service Worker cache is active.
 12. **"30-Second Group Turn" Pass-the-Phone Quiz Mode (`quiz()` in `app.js`)**:
     - **Why**: Students often revise in small groups of 2–4 around a single phone under a tree or in a classroom.
     - **Micro-UX**: In practice quizzes, show a subtle `👥 Swali la 1 (Mwanafunzi A) → Swali la 2 (Mwanafunzi B)` prompt so friends naturally take turns answering one question each before pressing `Check / Kagua`.
