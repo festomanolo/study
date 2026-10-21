@@ -92,7 +92,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
       - `debug`: **Syntax Error** (stopped before running) vs. **Logic Error** (runs fine, wrong answer like `+` instead of `*`).
 15. **"Where the 2 Marks Live" NECTA Keyword Underliner (`renderPage()` on `summary` & `glossary` pages)**:
     - **Why**: NECTA marking schemes split a 2-mark definition into two 1-mark key phrases. Students who write a vague paragraph get `0/2`.
-    - **Micro-UX**: Add a `[🎯 Alama za NECTA]` toggle on `glossary` and `summary` pages that underlines the key scoring verbs/nouns in red pen and shows `(1 mark + 1 mark = 2 marks)`.
+    - **Micro-UX**: Add a `[Alama za NECTA]` toggle on `glossary` and `summary` pages that underlines the key scoring verbs/nouns in red pen and shows `(1 mark + 1 mark = 2 marks)`.
 16. **Long-Press / Tap Sentence "Fafanua Mstari Huu" Whisper Strip (`renderPage()` in `app.js`)**:
     - **Why**: Sometimes a student understands the technical term (`[[algorithm]]`) but gets stuck on an English sentence structure in the notes.
     - **Micro-UX**: When `🇹🇿 Fafanua` is active, tapping any paragraph or callout shows a compact canary-yellow sticky note strip explaining the core takeaway in plain conversational Kiswahili.
