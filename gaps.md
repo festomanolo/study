@@ -85,7 +85,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - **Micro-UX**: Display a phonetic pronunciation bracket `[AL-go-ri-thim]`, `[SU-do-kod]`, `[FI-shing]` inside the pencil margin popup alongside a single-word `Tamka` button.
 14. **Red-Margin "NECTA Trap Alerts" — *Makosa Yanayopoteza Alama* (`content.js` / `notes.js`)**:
     - **Why**: Students lose easy marks on predictable conceptual traps.
-    - **Micro-UX**: Render a hand-drawn red-ink warning box (`⚠️ Mtego wa Mtihani / Exam Trap`) on topics with notorious confusions:
+    - **Micro-UX**: Render a hand-drawn red-ink warning box (`Mtego wa Mtihani / Exam Trap`) on topics with notorious confusions:
       - `hardware`: **RAM** (clears when power cuts — *volatile*) vs. **Hard Disk/SSD** (keeps files when power cuts — *non-volatile*).
       - `internet`: **Internet** (global network of cables/routers) vs. **WWW** (collection of web pages on the internet).
       - `vars`: **`x = 5`** (stores 5 in box `x`) vs. **`x == 5`** (asks whether `x` equals 5).
