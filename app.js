@@ -265,7 +265,7 @@ function renderPage(sheet, { type, t, u }, pencil) {
     const mine = h('p', { contenteditable: true, 'aria-label': 'My notes', style: 'border-top:1px dashed #888;min-height:var(--line)', oninput: e => notePut(t.id, e.target.textContent) });
     noteGet(t.id).then(v => { mine.textContent = v; });
     sheet.append(h('small', {}, '✎ My notes / Maelezo yangu:'), mine);
-    if ('speechSynthesis' in window) sheet.append(h('button', { onclick: () => { speechSynthesis.cancel(); const m = new SpeechSynthesisUtterance(t.notes.join(' ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, '')); m.rate = S.set.rate; speechSynthesis.speak(m); } }, '🔊 Read aloud'));
+    sheet.append(h('button', { onclick: () => ttsSpeak(t.notes.join('. ').replace(/```[\s\S]*?```/g, ' ').replace(/^## /gm, '').replace(/[\[\]`]/g, ''), { rate: S.set.rate }) }, '🔊 Read aloud'));
   } else if (type === 'glossary') {
     sheet.append(h('p', {}, h('b', {}, 'Glossary / Msamiati')), ...Object.entries(t.terms).map(([k, d]) => h('p', {}, h('b', {}, k), PHON[k] ? h('span', { class: 'phon' }, ` [${PHON[k][0]}]`) : '', ` = ${S.set.sw ? d[0] : '—'} · ${d[2]}`)), marksView());
   } else if (type === 'recall') {
