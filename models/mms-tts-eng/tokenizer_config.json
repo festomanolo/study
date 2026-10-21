@@ -1,0 +1,15 @@
+{
+  "add_blank": true,
+  "added_tokens_decoder": {
+    "0": {
+      "content": "k",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "38": {
+      "content": "<unk>",
+      "lstrip": false,
+      "normalized": false,
