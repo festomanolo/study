@@ -76,7 +76,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - **Micro-UX**: Show a persistent green badge on the backpack (`Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando`) that confirms when the Service Worker cache is active.
 12. **"30-Second Group Turn" Pass-the-Phone Quiz Mode (`quiz()` in `app.js`)**:
     - **Why**: Students often revise in small groups of 2–4 around a single phone under a tree or in a classroom.
-    - **Micro-UX**: In practice quizzes, show a subtle `👥 Swali la 1 (Mwanafunzi A) → Swali la 2 (Mwanafunzi B)` prompt so friends naturally take turns answering one question each before pressing `Check / Kagua`.
+    - **Micro-UX**: In practice quizzes, show a subtle `Swali la 1 (Mwanafunzi A) -> Swali la 2 (Mwanafunzi B)` prompt so friends naturally take turns answering one question each before pressing `Check / Kagua`.
 
 ### Bundle 4: Language-Bridge & Exam-Craft Micro-Features
 
