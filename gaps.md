@@ -82,7 +82,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
 
 13. **Phonetic "Read-Aloud Confidence" Syllable Guide (`content.js` & `renderPage()` in `app.js`)**:
     - **Why**: Students coming from Kiswahili primary school know how to read phonetic syllables, but English silent letters (*algorithm*, *pseudocode*, *volatile*, *phishing*, *hierarchy*) make them afraid to speak up in class.
-    - **Micro-UX**: Display a phonetic pronunciation bracket `[AL-go-ri-thim]`, `[SU-do-kod]`, `[FI-shing]` inside the `✏️` pencil margin popup alongside a single-word `🔊 Tamka` button.
+    - **Micro-UX**: Display a phonetic pronunciation bracket `[AL-go-ri-thim]`, `[SU-do-kod]`, `[FI-shing]` inside the pencil margin popup alongside a single-word `Tamka` button.
 14. **Red-Margin "NECTA Trap Alerts" — *Makosa Yanayopoteza Alama* (`content.js` / `notes.js`)**:
     - **Why**: Students lose easy marks on predictable conceptual traps.
     - **Micro-UX**: Render a hand-drawn red-ink warning box (`⚠️ Mtego wa Mtihani / Exam Trap`) on topics with notorious confusions:
