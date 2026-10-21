@@ -148,3 +148,46 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
 - **Part 3.2:** `.gitignore` added; fonts self-hosted in `fonts/` (OFL); the legacy notebook uses a precompiled `legacy/tailwind.css` and local fonts, so nothing loads from the network. CI already existed.
 - **Part 3.3:** every unit checkpoint now has short-answer questions marked by an EN+SW keyword rubric (`micro.js` `SHORT`); all 15 listed bespoke labs are built in `labs.js` and covered by `tests/e2e/labs.mjs`.
 - **Still open:** teacher review of all Swahili (`docs/SWAHILI_REVIEW.csv` and `micro.js`), extra `[[term]]` links in `notes.js` (`EXTRA`), fonts are 195 KB against the 120 KB budget (subsetting needed), the whisper strip shows a topic-level Kiswahili takeaway plus term translations rather than a per-sentence translation.
+
+---
+
+## Part 4: Concept-Capture & Adaptive Understanding Engine (`understand.js`)
+
+### 1. Why This Is Achievable (Without Cloud LLMs or Bando)
+
+Most EdTech apps evaluate learners with a blunt percentage (`Score: 1/3 — Revise the notes and try again`). Re-reading the exact same paragraph that failed to click the first time rarely fixes the confusion. Conversely, cloud LLM tutors cost money per token, require mobile data (*bando*), and often give explanations that drift from the TIE syllabus and NECTA marking schemes.
+
+In Form 1 & Form 2 Computer Science, **how a student misunderstands a concept is finite, observable, and deterministic**. Because MANOLO Backpack already owns the Python interpreter (`interp.js`), the trace-table scratchpad (`consoleLab`), the interactive diagrams (`notebook.js`), and the bilingual rubric (`micro.js`), we can build a **zero-bandwidth Concept-Capture & Adaptive Understanding Engine (`understand.js`, ~4 KB gz)** that:
+1. **Reads how a kid understands** by capturing 5 live diagnostic signals as they interact with notes, diagrams, code, and questions.
+2. **Evaluates which specific sub-concept or mental model failed** (not just "wrong answer", but *why* they chose that answer or wrote that bug).
+3. **Dynamically injects tailored remedial content** directly onto the ruled notebook page (alternate local analogies, decomposed step-by-step trace cards, visual contrast boxes, and 15-second "Prove You Captured It" micro-checks) until the concept clicks.
+
+---
+
+### 2. The 5 Diagnostic Signals (How the Engine Reads the Learner's Mind)
+
+| Signal Source | What the Engine Observes | Example Misconception Diagnosed |
+|---|---|---|
+| **1. Diagnostic Distractor Tagging (`quiz` & `checkpoint`)** | Every wrong MCQ option maps to a specific `misconceptionId` instead of a generic `false`. | Picking `SSD` as volatile memory -> `M_VOLATILE_FLIP` (confusing temporary workbench with permanent storehouse). Picking `"5" + 5 -> 10` -> `M_STR_NUM_COERCE` (ignoring quotation marks around digits). |
+| **2. Python AST & Error Telemetry (`interp.js`)** | Inspects the learner's code edits, error types (`SyntaxError`, `NameError`, `TypeError`, `IndentationError`, `LoopError`), and AST patterns across runs. | Writing `if marks = 50:` -> `M_ASSIGN_VS_EQ`. Repeated `IndentationError` -> `M_BLOCK_SCOPE`. Infinite `while` loop -> `M_LOOP_STATE_UPDATE`. |
+| **3. Trace-Table Prediction Delta (`tracepad` in `app.js`)** | Compares the learner's manual dry-run prediction (`Step | Variables | Output`) against the actual generator events from `run()`. | Writing `age=15` on step 3 after `age = age + 1` -> `M_VAR_IMMUTABLE` (believing a variable keeps its first value or stores both values at once). |
+| **4. Lab Bounce & Active-Recall Hesitation (`labs.js` & `notebook.js`)** | Tracks which tiles bounce off which sockets (`wrong` / `bad` class) and which diagram labels take multiple attempts. | Bouncing `Antivirus` onto `Application software` -> `M_UTIL_VS_APP` (not distinguishing system utilities from user applications). |
+| **5. Missing-Mark Rubric Half-Hits (`markShort` in `micro.js`)** | Checks *which* of the two 1-mark keyword groups was missed in a 2-mark NECTA definition. | Earning Mark 1 (`"temporary memory"`) for RAM but missing Mark 2 (`"lost when power goes off"`) -> `M_HALF_DEF_RAM`. |
+
+---
+
+### 3. Per-Learner Concept State Model (`S.understand`)
+
+Stored per learner profile inside `localStorage` (`manolo.v1.<profile>`), requiring **0 bytes of network traffic**:
+
+```js
+// S.understand[conceptId]
+{
+  mastery: 0.35,              // 0.0 (unseen/struggling) -> 1.0 (solidly captured)
+  attempts: 4,                // total diagnostic interactions on this concept
+  streak: 0,                  // consecutive first-try captures
+  misconceptions: {           // frequency of specific mental-model bugs
+    M_STR_NUM_COERCE: 2,
+    M_ASSIGN_VS_EQ: 1
+  },
+  preferredBridge: 'analogy', // 'analogy' | 'visual-contrast' | 'swahili-step' | 'trace'
