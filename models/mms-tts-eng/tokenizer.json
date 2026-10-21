@@ -17,3 +17,22 @@
         "type": "Sequence",
         "normalizers": [
             {
+                "type": "Lowercase"
+            },
+            {
+                "type": "Replace",
+                "pattern": {
+                    "Regex": "[^k'zyudhesw\u20133cp\\-1jmi flo0bra42n_xvtq56g]"
+                },
+                "content": ""
+            },
+            {
+                "type": "Strip",
+                "strip_left": true,
+                "strip_right": true
+            },
+            {
+                "type": "Replace",
+                "pattern": {
+                    "Regex": "(?=.)|(?<!^)$"
+                },
