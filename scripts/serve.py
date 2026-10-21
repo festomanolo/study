@@ -191,3 +191,42 @@ class ManoloHandler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
+            return
+
+        if parsed.path == "/api/tts":
+            qs = urllib.parse.parse_qs(parsed.query)
+            text = (qs.get("text") or [""])[0][:1500]
+            try:
+                wav_bytes = synthesize_wav(text)
+            except Exception as exc:
+                err = json.dumps({"ok": False, "error": str(exc)}).encode("utf-8")
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(err)))
+                self.end_headers()
+                self.wfile.write(err)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/wav")
+            self.send_header("Content-Length", str(len(wav_bytes)))
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.end_headers()
+            self.wfile.write(wav_bytes)
+            return
+
+        super().do_GET()
+
+
+def main() -> None:
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    ensure_model()
+    server = ThreadingHTTPServer(("0.0.0.0", port), ManoloHandler)
+    print(f"MANOLO server + Neural TTS listening on http://localhost:{port}/")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
