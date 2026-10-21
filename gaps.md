@@ -58,7 +58,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
    - **Why**: Cheap Android keyboards automatically capitalize the first letter of every new line (`Print("Jambo")`, `If marks >= 50:`, `For i in range(3):`) and insert curly quotes (`“ ”`, `‘ ’`). Beginners get `NameError: "Print" is not a function` or `SyntaxError` and think coding is impossible.
    - **Micro-UX**:
      - Silently normalize curly quotes (`“ ” ‘ ’` → `" '`) and non-breaking spaces in `interp.js` or before running.
-     - If a line starts with a capitalized Python keyword/builtin (`Print`, `Input`, `If`, `Elif`, `Else`, `For`, `While`, `Range`, `Int`, `Float`, `Str`, `Len`), show a 1-tap yellow chip above the console: `📱 Simu imeweka herufi kubwa "Print". Rekebisha iwe "print"? [🔧 Fix Auto-Caps]`.
+     - If a line starts with a capitalized Python keyword/builtin (`Print`, `Input`, `If`, `Elif`, `Else`, `For`, `While`, `Range`, `Int`, `Float`, `Str`, `Len`), show a 1-tap yellow chip above the console: `Simu imeweka herufi kubwa "Print". Rekebisha iwe "print"? [Fix Auto-Caps]`.
 8. **Torn-Paper "Dry-Run / Trace Table" Scratchpad (`consoleLab()` in `app.js`)**:
    - **Why**: NECTA Form 2 & Form 4 programming questions heavily test **manual trace tables** (tracking variable values line by line on paper without a computer).
    - **Micro-UX**: Add a `[📋 Kikaratasi cha Trace]` toggle inside `consoleLab` that opens a 3-column ruled paper slip (`Step | Variable Values | Printed Output`) where students type their prediction before pressing `▶ Run`, then compares their prediction with the actual `vars` and `out` from `interp.js`.
