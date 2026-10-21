@@ -47,8 +47,8 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
    - **Micro-UX**: Style `.spread .sheet h3.ink-head` with a double ballpoint/red-pen underline (`border-bottom: 3px double var(--margin-red)`) that animates left-to-right when the page opens.
 5. **Left-Margin Teacher Inspection Stamp — *Ukaguzi wa Daftari* (`renderPage()` in `app.js`)**:
    - **Why**: Weekly notebook inspection (*ukaguzi wa madaftari*) where the teacher signs and dates the margin in red pen is a core school ritual.
-   - **Micro-UX**: Once `topicDone(t)` is true (Lab + Quiz >= 60%), render a rotated red-pen margin signature (`✓ Seen • Mwl. Manolo`) in the left red margin of that topic's pages.
-6. **"Copy to Physical Daftari" Mode — `[✍️ Nakili Daftarini]` (`pageScene()` in `app.js`)**:
+   - **Micro-UX**: Once `topicDone(t)` is true (Lab + Quiz >= 60%), render a rotated red-pen margin signature (`Seen • Mwl. Manolo`) in the left red margin of that topic's pages.
+6. **"Copy to Physical Daftari" Mode — `[Nakili Daftarini]` (`pageScene()` in `app.js`)**:
    - **Why**: Students still need notes written in their physical Counter Book for class inspection.
    - **Micro-UX**: A pill button that numbers every ruled line (`1, 2, 3…`), displays an estimate (`≈ 1.2 Counter Book pages`), hides floating popups, and requests `navigator.wakeLock?.request('screen')` so the phone screen doesn't turn off while the student copies notes by hand.
 
