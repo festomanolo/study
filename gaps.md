@@ -7,6 +7,7 @@ This document covers:
 1. **What Most Tanzanian EdTechs Build (Presumed Correct, Not Demanded)** vs. what learners, teachers, and parents actually need.
 2. **16 High-Impact Micro-Features (Real-Book UI/UX & Local Realities)** with concrete implementation blueprints for MANOLO Backpack.
 3. **Current Codebase, Testing, PWA & Curriculum Gaps** identified from scanning `/Volumes/MacX/projects/study`.
+4. **Concept-Capture & Adaptive Understanding Engine (`understand.js`)** — how to evaluate *how* a learner captures concepts and dynamically inject tailored explanations, analogies, and micro-drills offline.
 
 ---
 
