@@ -190,7 +190,7 @@ function pageScene(f, n, ghost = false) {
   const dg = sheet._dg, tray = h('div', { class: 'tray', hidden: true }), hud = h('div', { class: 'hud2', hidden: true, role: 'status' });
   const topicFirst = pg.t ? pgs.findIndex(x => x.t === pg.t) : -1, want = pg.t && DIAGRAMS[pg.t.id];
   const withDiagram = what => () => { if (!want) return; if (dg) { what === 'sim' ? dg.sim(hud) : dg.recalling ? dg.stopRecall() : dg.recall(tray); } else { try { sessionStorage.setItem('manolo.pending', what); } catch {} go(`#/cs/${f}/p/${topicFirst}`); } };
-  let talking = false; const stopTalk = () => { talking = false; try { speechSynthesis.cancel(); } catch {} sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
+  let talking = false; const stopTalk = () => { talking = false; ttsStop(); sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); voice.classList.remove('on'); };
   const talk = () => {
     if (talking) return stopTalk(); if (!('speechSynthesis' in window)) return say('Speech is not available on this device.');
     const blocks = [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > h3, :scope > ul > li')].filter(b => b.textContent.trim()); let i = 0; talking = true; voice.classList.add('on'); speechSynthesis.cancel();
