@@ -95,7 +95,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - **Micro-UX**: Add a `[Alama za NECTA]` toggle on `glossary` and `summary` pages that underlines the key scoring verbs/nouns in red pen and shows `(1 mark + 1 mark = 2 marks)`.
 16. **Long-Press / Tap Sentence "Fafanua Mstari Huu" Whisper Strip (`renderPage()` in `app.js`)**:
     - **Why**: Sometimes a student understands the technical term (`[[algorithm]]`) but gets stuck on an English sentence structure in the notes.
-    - **Micro-UX**: When `🇹🇿 Fafanua` is active, tapping any paragraph or callout shows a compact canary-yellow sticky note strip explaining the core takeaway in plain conversational Kiswahili.
+    - **Micro-UX**: When `Fafanua` is active, tapping any paragraph or callout shows a compact canary-yellow sticky note strip explaining the core takeaway in plain conversational Kiswahili.
 
 ---
 
