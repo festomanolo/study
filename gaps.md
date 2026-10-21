@@ -50,7 +50,7 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
    - **Micro-UX**: Once `topicDone(t)` is true (Lab + Quiz >= 60%), render a rotated red-pen margin signature (`Seen • Mwl. Manolo`) in the left red margin of that topic's pages.
 6. **"Copy to Physical Daftari" Mode — `[Nakili Daftarini]` (`pageScene()` in `app.js`)**:
    - **Why**: Students still need notes written in their physical Counter Book for class inspection.
-   - **Micro-UX**: A pill button that numbers every ruled line (`1, 2, 3…`), displays an estimate (`≈ 1.2 Counter Book pages`), hides floating popups, and requests `navigator.wakeLock?.request('screen')` so the phone screen doesn't turn off while the student copies notes by hand.
+   - **Micro-UX**: A pill button that numbers every ruled line (`1, 2, 3…`), displays an estimate (`approx. 1.2 Counter Book pages`), hides floating popups, and requests `navigator.wakeLock?.request('screen')` so the phone screen doesn't turn off while the student copies notes by hand.
 
 ### Bundle 2: Mobile Python Keyboard Auto-Healer & Dry-Run Scratchpad
 
