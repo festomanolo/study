@@ -431,7 +431,7 @@ function exportProgress() {
   const a = h('a', { href: URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' })), download: 'progress.csv' }); a.click();
 }
 
-const CACHE_V = 'manolo-v6';
+const CACHE_V = 'manolo-v7';
 window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();
