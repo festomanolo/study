@@ -32,8 +32,22 @@ function applySettings() {
 const spread = (sheet, clip) => h('div', { class: 'spread' }, h('div', { class: 'glimpse' }), h('div', { class: 'pages' }, sheet, clip || null, h('div', { class: 'grain' }), h('div', { class: 'light' }), h('div', { class: 'stampbrand' }, 'MANOLO'), h('div', { class: 'mark' }, 'festomanolo.com')));
 const reduced = () => document.documentElement.classList.contains('reduce');
 
-// ---- audio: synthetic chimes (0 KB) ----
-let ac; function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} }
+// ---- audio: synthetic chimes (0 KB) + local neural TTS (/api/tts with Web Speech fallback) ----
+let ac, curAudio = null;
+function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} }
+function ttsStop() { if (curAudio) { try { curAudio.pause(); curAudio.src = ''; } catch {} curAudio = null; } try { speechSynthesis.cancel(); } catch {} }
+function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
+function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
+  ttsStop(); const c = t.replace(/✏️?/g, '').trim(); if (!c) return onEnd?.();
+  const a = new Audio('/api/tts?text=' + encodeURIComponent(c)); curAudio = a; a.playbackRate = rate || 1;
+  a.onended = () => { if (curAudio === a) curAudio = null; onEnd?.(); };
+  a.onerror = () => {
+    if (curAudio === a) curAudio = null;
+    if ('speechSynthesis' in window) { try { const m = new SpeechSynthesisUtterance(c); m.rate = rate || 1; if (onEnd) m.onend = onEnd; if (onError) m.onerror = onError; speechSynthesis.speak(m); return; } catch {} }
+    onError ? onError() : say('Speech is not available on this device.');
+  };
+  a.play().catch(() => a.onerror?.());
+}
 
 // ---- spring ----
 function spring(from, to, cb, k = 180, c = 18) { let x = from, v = 0, stop = false; (function f() { if (stop) return; v += (-k * (x - to) - c * v) / 60; x += v / 60; cb(x); if (Math.abs(x - to) > .001 || Math.abs(v) > .01) requestAnimationFrame(f); else cb(to); })(); return () => stop = true; }
