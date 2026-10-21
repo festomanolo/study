@@ -36,3 +36,22 @@
                 "pattern": {
                     "Regex": "(?=.)|(?<!^)$"
                 },
+                "content": "k"
+            }
+        ]
+    },
+    "pre_tokenizer": {
+        "type": "Split",
+        "pattern": {
+            "Regex": ""
+        },
+        "behavior": "Isolated",
+        "invert": false
+    },
+    "post_processor": null,
+    "decoder": null,
+    "model": {
+        "vocab": {
+            "k": 0,
+            "'": 1,
+            "z": 2,
