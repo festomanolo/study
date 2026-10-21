@@ -7,6 +7,7 @@ This document covers:
 1. **What Most Tanzanian EdTechs Build (Presumed Correct, Not Demanded)** vs. what learners, teachers, and parents actually need.
 2. **16 High-Impact Micro-Features (Real-Book UI/UX & Local Realities)** with concrete implementation blueprints for MANOLO Backpack.
 3. **Current Codebase, Testing, PWA & Curriculum Gaps** identified from scanning `/Volumes/MacX/projects/study`.
+4. **Concept-Capture & Adaptive Understanding Engine (`understand.js`)** — how to evaluate *how* a learner captures concepts and dynamically inject tailored explanations, analogies, and micro-drills offline.
 
 ---
 
@@ -17,9 +18,9 @@ Most EdTech platforms in Tanzania copy Silicon Valley or Western consumer EdTech
 | What EdTechs Build (Presumed Correct) | Why It Fails in Real Tanzanian Schools & Homes | What Is Actually Demanded Instead |
 |---|---|---|
 | **1. Heavy Video Lectures ("YouTube-style Mwalimu")** | Eats 100–300 MB per lesson (*bando* anxiety). Students on a TZS 500–1,000 daily bundle cannot stream video, and pausing/rewinding a 20-minute video to copy notes into a physical *daftari* is painful. | **Structured, ruled *Daftari* notes + 0-KB voice/highlighter walk-throughs** that match classroom board notes and can be copied directly into a real Counter Book. |
-| **2. Open-Ended AI Chatbots ("Ask AI Mwalimu Anything")** | Form 1–2 students transitioning from Kiswahili primary school do not know *what prompt to type in English*. Worse, LLMs give verbose, university-level answers that do **not** match **NECTA marking schemes**, costing students marks. | **Inline tap-to-reveal Kiswahili pencil marginalia (`✏️`)** right on the hard English word + **1-line NECTA exam definitions** that earn full marks. |
+| **2. Open-Ended AI Chatbots ("Ask AI Mwalimu Anything")** | Form 1–2 students transitioning from Kiswahili primary school do not know *what prompt to type in English*. Worse, LLMs give verbose, university-level answers that do **not** match **NECTA marking schemes**, costing students marks. | **Inline tap-to-reveal Kiswahili pencil marginalia** right on the hard English word + **1-line NECTA exam definitions** that earn full marks. |
 | **3. Individual Accounts, Email/OTP Logins & Parent Portals** | Most Form 1–2 day students do not own a personal smartphone or email—they borrow a parent's, older sibling's, or neighbour's phone for 30 minutes at night, or 3–4 friends crowd around one screen. | **Zero-login instant start + a 1-tap "Who's Studying?" name switcher** right on the notebook cover sticker (`Asha` ↔ `Juma` ↔ `Neema`). |
-| **4. Western Gamification (Daily Streaks, Gems, Leaderboards)** | A student who only gets their mother's phone on Tuesday and Saturday loses their "daily streak" immediately—feeling punished for not owning a personal device. | **Permanent "Red-Pen" teacher ticks (`✓`), rubber stamps (`HONGERA`), and *Yaliyomo* completion ticks** that never expire when you miss a day. |
+| **4. Western Gamification (Daily Streaks, Gems, Leaderboards)** | A student who only gets their mother's phone on Tuesday and Saturday loses their "daily streak" immediately—feeling punished for not owning a personal device. | **Permanent "Red-Pen" teacher ticks, rubber stamps (`HONGERA`), and *Yaliyomo* completion ticks** that never expire when you miss a day. |
 | **5. Desktop-Style Code Sandboxes** | Typing Python symbols (`:`, `_`, `( )`, `" "`, `=`, 4-space indent) on a cheap Android touchscreen keyboard is maddening—auto-correct capitalizes `Print` into a `NameError` and inserts curly smart-quotes (`“ ”`) that break syntax. | **A thumb-friendly mobile token bar + keyboard auto-healer** that silently fixes smart quotes and offers a 1-tap fix when mobile auto-caps turns `print` into `Print`. |
 | **6. Generic Multiple-Choice Quizzes Only** | NECTA exams do **not** only test MCQs. Students fail Section B & C because they don't know which keywords carry the 2 marks in a definition, how to fill a trace table, or how to draw a valid flowchart. | **Red-Pen Rubric X-Ray ("Where each mark comes from")** that highlights the exact phrases a NECTA marker looks for. |
 | **7. Cloud-Synced Teacher Dashboards Requiring School Wi-Fi** | Most school computer labs have intermittent or zero internet, and teachers mark 60–100 physical notebooks per stream by hand. | **Offline "Pass-Around" Inspection Mode & 1-tap CSV/WhatsApp summary** so a teacher can check progress on the device in 5 seconds during class. |
@@ -46,10 +47,10 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
    - **Micro-UX**: Style `.spread .sheet h3.ink-head` with a double ballpoint/red-pen underline (`border-bottom: 3px double var(--margin-red)`) that animates left-to-right when the page opens.
 5. **Left-Margin Teacher Inspection Stamp — *Ukaguzi wa Daftari* (`renderPage()` in `app.js`)**:
    - **Why**: Weekly notebook inspection (*ukaguzi wa madaftari*) where the teacher signs and dates the margin in red pen is a core school ritual.
-   - **Micro-UX**: Once `topicDone(t)` is true (Lab + Quiz >= 60%), render a rotated red-pen margin signature (`✓ Seen • Mwl. Manolo`) in the left red margin of that topic's pages.
-6. **"Copy to Physical Daftari" Mode — `[✍️ Nakili Daftarini]` (`pageScene()` in `app.js`)**:
+   - **Micro-UX**: Once `topicDone(t)` is true (Lab + Quiz >= 60%), render a rotated red-pen margin signature (`Seen • Mwl. Manolo`) in the left red margin of that topic's pages.
+6. **"Copy to Physical Daftari" Mode — `[Nakili Daftarini]` (`pageScene()` in `app.js`)**:
    - **Why**: Students still need notes written in their physical Counter Book for class inspection.
-   - **Micro-UX**: A pill button that numbers every ruled line (`1, 2, 3…`), displays an estimate (`≈ 1.2 Counter Book pages`), hides floating popups, and requests `navigator.wakeLock?.request('screen')` so the phone screen doesn't turn off while the student copies notes by hand.
+   - **Micro-UX**: A pill button that numbers every ruled line (`1, 2, 3…`), displays an estimate (`approx. 1.2 Counter Book pages`), hides floating popups, and requests `navigator.wakeLock?.request('screen')` so the phone screen doesn't turn off while the student copies notes by hand.
 
 ### Bundle 2: Mobile Python Keyboard Auto-Healer & Dry-Run Scratchpad
 
@@ -57,10 +58,10 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
    - **Why**: Cheap Android keyboards automatically capitalize the first letter of every new line (`Print("Jambo")`, `If marks >= 50:`, `For i in range(3):`) and insert curly quotes (`“ ”`, `‘ ’`). Beginners get `NameError: "Print" is not a function` or `SyntaxError` and think coding is impossible.
    - **Micro-UX**:
      - Silently normalize curly quotes (`“ ” ‘ ’` → `" '`) and non-breaking spaces in `interp.js` or before running.
-     - If a line starts with a capitalized Python keyword/builtin (`Print`, `Input`, `If`, `Elif`, `Else`, `For`, `While`, `Range`, `Int`, `Float`, `Str`, `Len`), show a 1-tap yellow chip above the console: `📱 Simu imeweka herufi kubwa "Print". Rekebisha iwe "print"? [🔧 Fix Auto-Caps]`.
+     - If a line starts with a capitalized Python keyword/builtin (`Print`, `Input`, `If`, `Elif`, `Else`, `For`, `While`, `Range`, `Int`, `Float`, `Str`, `Len`), show a 1-tap yellow chip above the console: `Simu imeweka herufi kubwa "Print". Rekebisha iwe "print"? [Fix Auto-Caps]`.
 8. **Torn-Paper "Dry-Run / Trace Table" Scratchpad (`consoleLab()` in `app.js`)**:
    - **Why**: NECTA Form 2 & Form 4 programming questions heavily test **manual trace tables** (tracking variable values line by line on paper without a computer).
-   - **Micro-UX**: Add a `[📋 Kikaratasi cha Trace]` toggle inside `consoleLab` that opens a 3-column ruled paper slip (`Step | Variable Values | Printed Output`) where students type their prediction before pressing `▶ Run`, then compares their prediction with the actual `vars` and `out` from `interp.js`.
+   - **Micro-UX**: Add a `[Kikaratasi cha Trace]` toggle inside `consoleLab` that opens a 3-column ruled paper slip (`Step | Variable Values | Printed Output`) where students type their prediction before pressing `Run`, then compares their prediction with the actual `vars` and `out` from `interp.js`.
 9. **1-Tap Mobile Token Bar Expansion (`keys` in `consoleLab()`, `app.js` line 301)**:
    - **Why**: Beyond `: ( ) " = [ ] Tab`, students struggle to find `_`, `>=`, `<=`, `!=`, `==`, `#`, and `+` on phone keyboards.
    - **Micro-UX**: Add `==`, `>=`, `!=`, `_`, `#`, `print()`, and `input()` as scrollable 1-tap ink chips above the code textarea.
@@ -72,29 +73,29 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
     - **Micro-UX**: On the notebook cover right below `Name:`, show small clickable name pills (`[+ Add Learner]` / `[Asha]` / `[Juma]`). Switching learners swaps the active profile slot in `localStorage` (`manolo.v1.<profile>`) in 1 tap with zero passwords or internet.
 11. **"0 MB Bando Used" Offline Shield Badge (`bag()` in `app.js` line 85)**:
     - **Why**: Parents hesitate to hand over their phone if they think an app is secretly consuming their mobile data bundle (*bando*).
-    - **Micro-UX**: Show a persistent green badge on the backpack (`🟢 Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando`) that confirms when the Service Worker cache (`manolo-v4`) is active.
+    - **Micro-UX**: Show a persistent green badge on the backpack (`Offline Ready • 0 MB Bando Used / Inafanya kazi bila bando`) that confirms when the Service Worker cache is active.
 12. **"30-Second Group Turn" Pass-the-Phone Quiz Mode (`quiz()` in `app.js`)**:
     - **Why**: Students often revise in small groups of 2–4 around a single phone under a tree or in a classroom.
-    - **Micro-UX**: In practice quizzes, show a subtle `👥 Swali la 1 (Mwanafunzi A) → Swali la 2 (Mwanafunzi B)` prompt so friends naturally take turns answering one question each before pressing `Check / Kagua`.
+    - **Micro-UX**: In practice quizzes, show a subtle `Swali la 1 (Mwanafunzi A) -> Swali la 2 (Mwanafunzi B)` prompt so friends naturally take turns answering one question each before pressing `Check / Kagua`.
 
 ### Bundle 4: Language-Bridge & Exam-Craft Micro-Features
 
 13. **Phonetic "Read-Aloud Confidence" Syllable Guide (`content.js` & `renderPage()` in `app.js`)**:
     - **Why**: Students coming from Kiswahili primary school know how to read phonetic syllables, but English silent letters (*algorithm*, *pseudocode*, *volatile*, *phishing*, *hierarchy*) make them afraid to speak up in class.
-    - **Micro-UX**: Display a phonetic pronunciation bracket `[AL-go-ri-thim]`, `[SU-do-kod]`, `[FI-shing]` inside the `✏️` pencil margin popup alongside a single-word `🔊 Tamka` button.
+    - **Micro-UX**: Display a phonetic pronunciation bracket `[AL-go-ri-thim]`, `[SU-do-kod]`, `[FI-shing]` inside the pencil margin popup alongside a single-word `Tamka` button.
 14. **Red-Margin "NECTA Trap Alerts" — *Makosa Yanayopoteza Alama* (`content.js` / `notes.js`)**:
     - **Why**: Students lose easy marks on predictable conceptual traps.
-    - **Micro-UX**: Render a hand-drawn red-ink warning box (`⚠️ Mtego wa Mtihani / Exam Trap`) on topics with notorious confusions:
+    - **Micro-UX**: Render a hand-drawn red-ink warning box (`Mtego wa Mtihani / Exam Trap`) on topics with notorious confusions:
       - `hardware`: **RAM** (clears when power cuts — *volatile*) vs. **Hard Disk/SSD** (keeps files when power cuts — *non-volatile*).
       - `internet`: **Internet** (global network of cables/routers) vs. **WWW** (collection of web pages on the internet).
       - `vars`: **`x = 5`** (stores 5 in box `x`) vs. **`x == 5`** (asks whether `x` equals 5).
       - `debug`: **Syntax Error** (stopped before running) vs. **Logic Error** (runs fine, wrong answer like `+` instead of `*`).
 15. **"Where the 2 Marks Live" NECTA Keyword Underliner (`renderPage()` on `summary` & `glossary` pages)**:
     - **Why**: NECTA marking schemes split a 2-mark definition into two 1-mark key phrases. Students who write a vague paragraph get `0/2`.
-    - **Micro-UX**: Add a `[🎯 Alama za NECTA]` toggle on `glossary` and `summary` pages that underlines the key scoring verbs/nouns in red pen and shows `(1 mark + 1 mark = 2 marks)`.
+    - **Micro-UX**: Add a `[Alama za NECTA]` toggle on `glossary` and `summary` pages that underlines the key scoring verbs/nouns in red pen and shows `(1 mark + 1 mark = 2 marks)`.
 16. **Long-Press / Tap Sentence "Fafanua Mstari Huu" Whisper Strip (`renderPage()` in `app.js`)**:
     - **Why**: Sometimes a student understands the technical term (`[[algorithm]]`) but gets stuck on an English sentence structure in the notes.
-    - **Micro-UX**: When `🇹🇿 Fafanua` is active, tapping any paragraph or callout shows a compact canary-yellow sticky note strip explaining the core takeaway in plain conversational Kiswahili.
+    - **Micro-UX**: When `Fafanua` is active, tapping any paragraph or callout shows a compact canary-yellow sticky note strip explaining the core takeaway in plain conversational Kiswahili.
 
 ---
 
@@ -147,3 +148,90 @@ These small, zero-bloat micro-interactions build on the tactile notebook metapho
 - **Part 3.2:** `.gitignore` added; fonts self-hosted in `fonts/` (OFL); the legacy notebook uses a precompiled `legacy/tailwind.css` and local fonts, so nothing loads from the network. CI already existed.
 - **Part 3.3:** every unit checkpoint now has short-answer questions marked by an EN+SW keyword rubric (`micro.js` `SHORT`); all 15 listed bespoke labs are built in `labs.js` and covered by `tests/e2e/labs.mjs`.
 - **Still open:** teacher review of all Swahili (`docs/SWAHILI_REVIEW.csv` and `micro.js`), extra `[[term]]` links in `notes.js` (`EXTRA`), fonts are 195 KB against the 120 KB budget (subsetting needed), the whisper strip shows a topic-level Kiswahili takeaway plus term translations rather than a per-sentence translation.
+
+---
+
+## Part 4: Concept-Capture & Adaptive Understanding Engine (`understand.js`)
+
+### 1. Why This Is Achievable (Without Cloud LLMs or Bando)
+
+Most EdTech apps evaluate learners with a blunt percentage (`Score: 1/3 — Revise the notes and try again`). Re-reading the exact same paragraph that failed to click the first time rarely fixes the confusion. Conversely, cloud LLM tutors cost money per token, require mobile data (*bando*), and often give explanations that drift from the TIE syllabus and NECTA marking schemes.
+
+In Form 1 & Form 2 Computer Science, **how a student misunderstands a concept is finite, observable, and deterministic**. Because MANOLO Backpack already owns the Python interpreter (`interp.js`), the trace-table scratchpad (`consoleLab`), the interactive diagrams (`notebook.js`), and the bilingual rubric (`micro.js`), we can build a **zero-bandwidth Concept-Capture & Adaptive Understanding Engine (`understand.js`, ~4 KB gz)** that:
+1. **Reads how a kid understands** by capturing 5 live diagnostic signals as they interact with notes, diagrams, code, and questions.
+2. **Evaluates which specific sub-concept or mental model failed** (not just "wrong answer", but *why* they chose that answer or wrote that bug).
+3. **Dynamically injects tailored remedial content** directly onto the ruled notebook page (alternate local analogies, decomposed step-by-step trace cards, visual contrast boxes, and 15-second "Prove You Captured It" micro-checks) until the concept clicks.
+
+---
+
+### 2. The 5 Diagnostic Signals (How the Engine Reads the Learner's Mind)
+
+| Signal Source | What the Engine Observes | Example Misconception Diagnosed |
+|---|---|---|
+| **1. Diagnostic Distractor Tagging (`quiz` & `checkpoint`)** | Every wrong MCQ option maps to a specific `misconceptionId` instead of a generic `false`. | Picking `SSD` as volatile memory -> `M_VOLATILE_FLIP` (confusing temporary workbench with permanent storehouse). Picking `"5" + 5 -> 10` -> `M_STR_NUM_COERCE` (ignoring quotation marks around digits). |
+| **2. Python AST & Error Telemetry (`interp.js`)** | Inspects the learner's code edits, error types (`SyntaxError`, `NameError`, `TypeError`, `IndentationError`, `LoopError`), and AST patterns across runs. | Writing `if marks = 50:` -> `M_ASSIGN_VS_EQ`. Repeated `IndentationError` -> `M_BLOCK_SCOPE`. Infinite `while` loop -> `M_LOOP_STATE_UPDATE`. |
+| **3. Trace-Table Prediction Delta (`tracepad` in `app.js`)** | Compares the learner's manual dry-run prediction (`Step | Variables | Output`) against the actual generator events from `run()`. | Writing `age=15` on step 3 after `age = age + 1` -> `M_VAR_IMMUTABLE` (believing a variable keeps its first value or stores both values at once). |
+| **4. Lab Bounce & Active-Recall Hesitation (`labs.js` & `notebook.js`)** | Tracks which tiles bounce off which sockets (`wrong` / `bad` class) and which diagram labels take multiple attempts. | Bouncing `Antivirus` onto `Application software` -> `M_UTIL_VS_APP` (not distinguishing system utilities from user applications). |
+| **5. Missing-Mark Rubric Half-Hits (`markShort` in `micro.js`)** | Checks *which* of the two 1-mark keyword groups was missed in a 2-mark NECTA definition. | Earning Mark 1 (`"temporary memory"`) for RAM but missing Mark 2 (`"lost when power goes off"`) -> `M_HALF_DEF_RAM`. |
+
+---
+
+### 3. Per-Learner Concept State Model (`S.understand`)
+
+Stored per learner profile inside `localStorage` (`manolo.v1.<profile>`), requiring **0 bytes of network traffic**:
+
+```js
+// S.understand[conceptId]
+{
+  mastery: 0.35,              // 0.0 (unseen/struggling) -> 1.0 (solidly captured)
+  attempts: 4,                // total diagnostic interactions on this concept
+  streak: 0,                  // consecutive first-try captures
+  misconceptions: {           // frequency of specific mental-model bugs
+    M_STR_NUM_COERCE: 2,
+    M_ASSIGN_VS_EQ: 1
+  },
+  preferredBridge: 'analogy', // 'analogy' | 'visual-contrast' | 'swahili-step' | 'trace'
+  unlockedRemedials: ['vars.M_STR_NUM_COERCE.slip1']
+}
+```
+
+#### Mastery Update Rule (Lightweight Bayesian / EMA Update):
+- **First-try correct prediction / lab / quiz**: `mastery = Math.min(1, mastery + 0.35)` and clears active misconception flags for that concept.
+- **Specific misconception triggered**: `mastery = Math.max(0, mastery - 0.25)`, increments `misconceptions[tag]`, and queues the matching **Adaptive Remedial Slip** for immediate injection on the current page.
+- **Modality Adaptation**: If a learner still misses a concept after reading a text explanation, the engine shifts `preferredBridge` to `'visual-contrast'` or `'swahili-step'` so the next injected explanation uses a different representation.
+
+---
+
+### 4. How the Engine Dynamically Adds Content to Enhance Understanding
+
+When `S.understand` detects an active misconception or low mastery (`< 0.5`) on a concept, `renderPage()` in `app.js` dynamically mounts **Adaptive Notebook Inserts** (styled like a yellow revision slip taped into the Counter Book margin or a red-pen Mwalimu coaching box):
+
+1. **Second-Angle Local Analogy Swap (`Analogy Bridge`)**:
+   - *Trigger*: Learner fails a concept after seeing the default analogy (e.g., *School Locker* for variables).
+   - *Injected Content*: A taped yellow revision note offering a completely different everyday Tanzanian mental model:
+     > **Fikiri Tena (M-Pesa Balance Analogy):** Wakati salio lako la M-Pesa ni `TZS 5,000` kisha ukatumiwa `TZS 2,000`, simu haihifadhi salio mbili tofauti—inafuta `5,000` na kuandika `7,000` pale pale. Hivyo ndivyo `age = age + 1` inavyofanya!
+2. **Side-by-Side Visual Contrast Card (`Misconception X-Ray`)**:
+   - *Trigger*: Learner confuses two adjacent concepts (`=` vs `==`, `RAM` vs `SSD`, `Compiler` vs `Interpreter`, `"5"` vs `5`).
+   - *Injected Content*: A 2-column ruled comparison box showing **What You Did / Thought** on the left vs. **How the Computer Sees It** on the right, with a 1-tap runnable mini-diff.
+3. **Decomposed Micro-Step Unfolder (`Worked Sub-Steps`)**:
+   - *Trigger*: Learner fails a multi-step problem (e.g., operator precedence `2 + 3 * 4`, `for i in range(1, 4)` trace table, or `if / elif / else` ordering).
+   - *Injected Content*: Breaks the single jump into 3 numbered micro-lines where the learner taps to reveal or fill one intermediate value at a time before seeing the final answer.
+4. **15-Second "Prove You Captured It" Micro-Check (`Exit Ticket Slip`)**:
+   - *Trigger*: Shown at the bottom of an injected remedial card.
+   - *Injected Content*: A single, targeted 2-choice or 1-word prediction question testing *only* the repaired misconception (e.g., *"Quick check: What does `print("3" + "3")` output? [ 6 ] [ 33 ]"*). Answering correctly folds the remedial slip into a compact green `[Concept Captured]` margin stamp and updates `S.understand[conceptId].mastery`.
+5. **Prerequisite Bridge Card (`Back-Link Refresher`)**:
+   - *Trigger*: Learner struggles in `branch` (`if marks >= 50:`) or `debug` because their `vars` comparison/type mastery is `< 0.4`.
+   - *Injected Content*: Mounts a collapsible 30-second refresher slip at the top of the `branch` page reviewing `>=` and `==` right in place, without forcing the student to lose their page in the notebook.
+
+---
+
+### 5. Concrete Implementation Blueprint for MANOLO Backpack
+
+1. **Create `understand.js` (~3.5 KB gz)**:
+   - Export `CONCEPTS` (mapping each topic's atomic concepts, prerequisite links, and misconception IDs).
+   - Export `REMEDIALS` (bilingual EN + Kiswahili adaptive content blocks: alternate analogies, visual contrast pairs, worked sub-steps, and 1-question micro-checks).
+   - Export `recordSignal(S, { concept, ok, tag, kind })` and `adaptiveBlocksFor(S, topicId, h, onCapture)`.
+2. **Wire Signals in `app.js`, `labs.js`, and `interp.js`**:
+   - In `quiz()` and `checkpoint()`: pass the chosen distractor index `j` to `recordSignal()` to log any distractor-specific misconception tag.
+   - In `consoleLab()`: when `run()` yields `t === 'error'` or when `compare()` finds a trace-table mismatch, call `recordSignal()` with the diagnosed error/trace tag.
+   - In `renderPage()`: mount `adaptiveBlocksFor(S, t.id)` right below the topic hook or relevant section heading so the notebook page physically adapts to how that specific student understands.
