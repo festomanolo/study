@@ -691,9 +691,24 @@ export const NOTES = {
 };
 
 // Terms added for the new notes (Swahili is unreviewed until a teacher signs off). [swahili, local analogy, NECTA wording]
-export const EXTRA = {};
-
-// Form 2 programming (F2-2.2) lives in notes-f2.js; merged here so content.js keeps one import.
-import { NOTES_F2, EXTRA_F2 } from './notes-f2.js';
-Object.assign(NOTES, NOTES_F2);
-for (const [k, v] of Object.entries(EXTRA_F2)) EXTRA[k] = { ...(EXTRA[k] || {}), ...v };
+export const EXTRA = {
+"why-prog": {"programming":["upangaji wa programu","Kama kuandika mapishi ya ugali hatua kwa hatua","Writing instructions that a computer can execute"],"bugs":["hitilafu","Mdudu aliyeingia kwenye nyumba","Mistakes in a program"]},
+"how-prog-runs": {"hardware":["vifaa vya kompyuta","Sehemu unazoweza kushika","Physical parts of a computer"],"software":["programu","Maelekezo yanayoendesha vifaa","Instructions that run on hardware"],"binary":["mfumo wa pili","Taa: imewaka (1) au imezimika (0)","Number system using 0 and 1"],"machine language":["lugha ya mashine","Lugha pekee ambayo CPU inaielewa","Binary instructions the CPU understands directly"],"assembly language":["lugha ya assembly","Majina mafupi kama ADD na MOV","Language using mnemonics for machine instructions"],"assembler":["kikusanyaji cha assembly","Mkalimani wa lugha ya assembly kwenda binary","Translates assembly to machine code"]},
+"lang": {"low-level languages":["lugha za kiwango cha chini","Maelekezo karibu na mashine","Languages close to machine code"],"high-level languages":["lugha za kiwango cha juu","Maelekezo karibu na lugha ya binadamu","Languages close to human language"]},
+"generations": {"generations":["vizazi vya lugha","Kama vizazi vya familia, kila kimoja ni rahisi zaidi","Five classes of languages by abstraction"],"paradigm":["mtindo wa upangaji","Njia tofauti za kupika chakula kimoja","Approach or style of programming"]},
+"tools": {"compiler":["kikusanyaji","Anatafsiri kitabu kizima kwanza","Translates whole program"],"interpreter":["mkalimani","Mkalimani kwenye mkutano: sentensi kwa sentensi","Line-by-line translator"],"source code":["msimbo chanzi","Mapishi uliyoandika kwa mkono wako","Code written by the programmer"],"translators":["wafasiri wa msimbo","Wakalimani wa lugha ya mashine","Convert programs to machine code"]},
+"envs": {"programming environment":["mazingira ya kuandika programu","Karakana ya fundi","Place where code is written, tested and run"],"ide":["mazingira jumuishi ya uundaji","Sanduku la zana lenye kila kitu","Integrated Development Environment"],"text editor":["kihariri maandishi","Daftari la kuandikia msimbo","Tool for typing and editing code"]},
+"setup": {"path":["njia ya mfumo","Anwani ya nyumba ili kompyuta ikupate","Where the OS looks for programs"]},
+"first": {"comments":["maelezo","Kumbukumbu ukingoni mwa daftari","Ignored notes in code"]},
+"prog-algo": {"algorithm":["algorithimu","Mapishi ya chai hatua kwa hatua","Step-by-step method to solve a problem"],"pseudocode":["msimbo-bandia","Maelekezo kwa lugha rahisi","Plain-word steps"],"flowchart":["chati mtiririko","Ramani ya safari","Diagram of an algorithm"]},
+"dtypes": {"data type":["aina ya data","Mfuko wa unga hautoshi maji","Kind of value a variable holds"],"data structures":["miundo ya data","Kabati lenye droo na mpangilio","Ways to organise stored data"]},
+"vars": {"variable":["kibadilishi","Sanduku lenye jina","Named memory location"]},
+"branch": {"branching":["maamuzi","Njia panda: kushoto au kulia","Choosing a path by a condition"]},
+"decompose": {"decomposition":["kuvunja tatizo vipande","Kujenga nyumba tofali kwa tofali","Breaking a problem into smaller parts"]},
+"pdlc": {"pdlc":["mzunguko wa uundaji programu","Hatua za kujenga nyumba, kuanzia ramani hadi ukarabati","Program Development Life Cycle"]},
+"scratch": {"scratch":["Scratch","Kujenga kwa vizibo vya kuchezea","Visual block-based language"]},
+"habits": {"comment":["maelezo ya msimbo","Alama ya penseli ukingoni mwa daftari","Note in code ignored by the computer"]},
+"debug": {"bug":["hitilafu","Mdudu aliyeingia kwenye nyumba","Error in a program"],"exception":["hitilafu ya wakati wa kuendesha","Tairi kupasuka njiani","Problem occurring while a program runs"]},
+"project": {},
+"careers": {"career":["kazi ya kitaaluma","Njia ya maisha ya kazi","Profession built on a skill"]},
+};
