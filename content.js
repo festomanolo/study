@@ -106,7 +106,7 @@ export const forms = {
         ['Computers only understand binary. A [[programming language]] lets humans write instructions. Categories: machine, assembly, high-level (Python, C, JavaScript).', 'Like giving directions to a boda-boda rider: clear, ordered, exact.'],
         { 'programming language': ['lugha ya programu', 'Kama kumwelekeza dereva wa boda', 'Language to instruct a computer'] },
         { type: 'ladder', stages: [['Machine code', '10110000 01100001 ...  (fast, unreadable)'], ['Assembly', 'MOV AL, 61h ; ADD AL, 2  (short names for instructions)'], ['Python (high-level)', 'total = 3 + 4   (readable, like English)']] },
-        [['Python is…', ['High-level', 'Machine code', 'Hardware'], 0], ['Computers directly understand…', ['Binary', 'Python', 'English'], 0], ['Why use high-level languages?', ['Easier to read and write', 'They are slower to learn', 'No reason'], 0]],
+        [['Python is…', ['High-level', 'Machine code', 'Hardware'], 0], ['Computers directly understand…', ['Binary', 'Python', 'English'], 0], ['Why use high-level languages?', ['Easier to read and write', 'They are slower to learn', 'No reason'], 0], ['Machine language is…', ['Binary 0s and 1s', 'English-like', 'A browser'], 0], ['Which is NOT portable?', ['Assembly language', 'Python', 'Java'], 0], ['An advantage of high-level languages is…', ['Easy to read and debug', 'Direct hardware control', 'No translator'], 0]],
         ['Machine → assembly → high-level.']),
       T('tools', 'F2-2.2(b)', 'Programming tools', 'Zana za programu',
         ['A [[compiler]] translates the whole program first, then runs. An [[interpreter]] translates and runs one line at a time. An IDE bundles a text editor, runner and debugger.'],
