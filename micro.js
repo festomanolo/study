@@ -35,6 +35,11 @@ export const PHON = {
 };
 // Red-margin exam traps: [English, Kiswahili].
 export const TRAPS = {
+  lang: ['Machine language is the ONLY language the CPU understands directly. Assembly still needs an ASSEMBLER; high-level code needs a compiler or interpreter.', 'Lugha ya mashine pekee ndiyo CPU inaielewa moja kwa moja.'],
+  generations: ['1GL = machine, 2GL = assembly (both low-level). 3GL, 4GL and 5GL are high-level. Python and SQL are 4GL; C and Pascal are 3GL.', '1GL na 2GL ni za kiwango cha chini; 3GL hadi 5GL ni za kiwango cha juu.'],
+  pdlc: ['Debugging FIXES known errors (stage 4); testing CHECKS the program works (stage 5). Maintenance comes last, after release.', 'Kutafuta makosa si sawa na majaribio.'],
+  dtypes: ['Stack = last in, first out. Queue = first in, first out. Do not swap them.', 'Stack: wa mwisho kuingia hutoka kwanza; queue: wa kwanza kuingia hutoka kwanza.'],
+  branch: ['A while loop needs something inside that changes the condition, or it never stops. range(1, 6) stops BEFORE 6.', 'while bila kubadilisha hali hurudia milele.'],
   hardware: ['RAM loses its data when the power goes off (volatile). A hard disk/SSD keeps files (non-volatile). Do not mix them up.', 'RAM hupoteza data umeme ukikatika; diski hutunza faili.'],
   internet: ['The Internet is the global network of cables and routers. The WWW is the collection of web pages that runs ON the internet.', 'Intaneti ni mtandao; WWW ni kurasa za wavuti zilizo juu yake.'],
   vars: ['`x = 5` STORES 5 in x. `x == 5` ASKS whether x equals 5. One = stores; two == compare.', 'Alama moja = huhifadhi; mbili == hulinganisha.'],
