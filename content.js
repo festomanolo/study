@@ -197,7 +197,13 @@ export const forms = {
         { project: ['mradi', 'Kazi ya kujenga kitu halisi', 'A task that builds something real'] },
         { type: 'console', code: 'price = int(input("Price: "))\nqty = int(input("Quantity: "))\ntotal = price * qty\nprint("Total TZS", total)', task: 'Extend: add a discount if total > 5000.' },
         [['Testing means…', ['Trying inputs to check results', 'Deleting code', 'Skipping'], 0], ['Reflection is…', ['Thinking about what to improve', 'A bug', 'A loop'], 0], ['A project needs…', ['Algorithm + code + tests', 'Only colours', 'Nothing'], 0]],
-        ['Plan, code, test, reflect.'])] },
+        ['Plan, code, test, reflect.']),
+      T('careers', 'F2-2.2(a)', 'Careers and the future of coding', 'Kazi na mustakabali wa programu',
+        ['Programming leads to careers such as software developer, game developer, data scientist, cybersecurity expert and web developer, and is a future-proof skill.'],
+        {},
+        { type: 'sort', cats: ['Web developer', 'Cybersecurity expert', 'Data scientist'], items: [['Builds websites with HTML, CSS and JavaScript', 0], ['Protects systems from attacks', 1], ['Analyses large datasets to support decisions', 2], ['Makes web apps work on phones too', 0], ['Finds weaknesses before criminals do', 1], ['Uses Python to study data', 2]] },
+        [['Who analyses big data?', ['Data scientist', 'Printer', 'Router'], 0], ['Who protects digital systems?', ['Cybersecurity expert', 'Game designer only', 'Teacher only'], 0], ['Coding is called future-proof because…', ['It stays useful as technology changes', 'It never changes', 'Nobody needs it'], 0]],
+        ['Many careers; a lasting skill.']),] },
   ] },
 };
 // Auto-tested code questions per unit.
