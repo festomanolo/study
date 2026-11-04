@@ -141,6 +141,8 @@ topic,field,english,swahili,reviewed,reviewer_notes
 "debug","title","Debugging","Kutafuta makosa","no",""
 "debug","term:bug","Error in a program","hitilafu","no",""
 "debug","analogy:bug","","Mdudu aliyeingia kwenye nyumba","no",""
+"debug","term:exception","Problem occurring while a program runs","hitilafu ya wakati wa kuendesha","no",""
+"debug","analogy:exception","","Tairi kupasuka njiani","no",""
 "project","title","Mini project and checkpoint","Mradi mdogo","no",""
 "project","term:project","A task that builds something real","mradi","no",""
 "project","analogy:project","","Kazi ya kujenga kitu halisi","no",""
