@@ -4,7 +4,7 @@ Open check (P0-3): verify 2.2(a) and loop/iteration wording against the printed 
 Coverage: run `node -e "import('./content.js').then(m=>{for(const f of Object.values(m.forms))for(const u of f.units)for(const t of u.topics)console.log(u.id,t.code,t.title)})"`.
 
 ## Form 2 programming coverage (F2-2.2)
-Expanded from the Form 2 Student's Book, programming chapter (OCR extract, pp. 104-158). Notes live in `notes-f2.js`.
+Expanded from the Form 2 Student's Book, programming chapter (OCR extract, pp. 104-158). Notes live in `notes.js`.
 | Student's Book section | Topic id | Syllabus code |
 |---|---|---|
 | Importance of programming, role of languages | `why-prog` | F2-2.2(a) |
