@@ -154,7 +154,7 @@ export const forms = {
         ['A [[variable]] is a named place in memory: `age = 15`. Types: int, float, str, bool. Operators: + - * / // % ** and comparisons; `and`/`or`/`not`.', 'By convention, constants are written in CAPITALS (PI = 3.14). Python will not stop you from changing them.', 'Watch the Variable Boxes as you step.'],
         { variable: ['kibadilishi', 'Sanduku lenye jina', 'Named memory location'], 'data type': ['aina ya data', 'Mfuko wa unga hautoshi maji', 'Kind of value'] },
         { type: 'console', code: DEMO + '\nPRICE = 500\nqty = 3\nprint("Total TZS", PRICE * qty)', task: 'Make a Duka calculator: use input() for the quantity.' },
-        [['Type of 3.5?', ['float', 'int', 'str'], 0], ['Result of 7 // 2?', ['3', '3.5', '4'], 0], ['"5" + 5 gives…', ['TypeError', '10', '55'], 0], ['Valid variable name?', ['total_price', '2cats', 'my-var'], 0]],
+        [['Type of 3.5?', ['float', 'int', 'str'], 0], ['Result of 7 // 2?', ['3', '3.5', '4'], 0], ['"5" + 5 gives…', ['TypeError', '10', '55'], 0], ['Valid variable name?', ['total_price', '2cats', 'my-var'], 0], ['What is 17 % 5?', ['2', '3', '3.4'], 0], ['Which is a string?', ['"Dodoma"', '42', 'True'], 0], ['Python constants are written in…', ['CAPITALS by convention', 'Italics', 'Brackets'], 0]],
         ['Variable, types, operators, constants.']),
       T('branch', 'F2-2.2(f)', 'Branching and loops', 'Maamuzi na marudio',
         ['[[Branching]] chooses a path: `if / elif / else`. Indentation (4 spaces) shows what belongs inside. Extension: `while` and `for … in range()` repeat steps.'],
