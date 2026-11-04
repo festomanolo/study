@@ -176,3 +176,8 @@ export const NOTES = {
 
 // Terms added for the new notes (Swahili is unreviewed until a teacher signs off). [swahili, local analogy, NECTA wording]
 export const EXTRA = {};
+
+// Form 2 programming (F2-2.2) lives in notes-f2.js; merged here so content.js keeps one import.
+import { NOTES_F2, EXTRA_F2 } from './notes-f2.js';
+Object.assign(NOTES, NOTES_F2);
+for (const [k, v] of Object.entries(EXTRA_F2)) EXTRA[k] = { ...(EXTRA[k] || {}), ...v };
