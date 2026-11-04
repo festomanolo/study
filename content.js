@@ -190,7 +190,7 @@ export const forms = {
         ['A [[bug]] is a mistake. Types: syntax (breaks the rules), runtime (crashes), logic (wrong answer). Read the error message, trace with print or Step, fix one thing at a time.'],
         { bug: ['hitilafu', 'Mdudu aliyeingia kwenye nyumba', 'Error in a program'] },
         { type: 'console', code: 'price = 500\nqty = 3\nprint("Total:", price + qty)\nprint(totl)', task: 'Bug hunt: fix the logic bug (+) and the NameError.' },
-        [['A NameError is a…', ['Runtime error', 'Syntax error', 'Logic error'], 0], ['Wrong answer, no crash is…', ['Logic error', 'Syntax error', 'Hardware fault'], 0], ['A missing quote is a…', ['Syntax error', 'Logic error', 'Runtime error'], 0]],
+        [['A NameError is a…', ['Runtime error', 'Syntax error', 'Logic error'], 0], ['Wrong answer, no crash is…', ['Logic error', 'Syntax error', 'Hardware fault'], 0], ['A missing quote is a…', ['Syntax error', 'Logic error', 'Runtime error'], 0], ['Rubber duck debugging means…', ['Explaining your code aloud', 'Cleaning the keyboard', 'Deleting code'], 0], ['IndexError means…', ['Index outside the list', 'Missing quote', 'Wrong formula'], 0], ['A breakpoint…', ['Pauses the program at a line', 'Ends the program', 'Prints'], 0]],
         ['Syntax, runtime, logic bugs.']),
       T('project', 'F2-2.2(d–g)', 'Mini project and checkpoint', 'Mradi mdogo',
         ['Pick one: canteen order total, grade calculator, guess-the-number, fee estimator (a simulation). Marks: understanding, algorithm, correctness, testing, reflection.'],
