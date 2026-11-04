@@ -118,7 +118,7 @@ export const forms = {
         ['A [[compiler]] translates the whole program first, then runs. An [[interpreter]] translates and runs one line at a time. An IDE bundles a text editor, runner and debugger.'],
         { compiler: ['kikusanyaji', 'Anatafsiri kitabu kizima kwanza', 'Translates whole program'], interpreter: ['mkalimani', 'Mkalimani kwenye mkutano: sentensi kwa sentensi', 'Line-by-line translator'] },
         { type: 'sort', cats: ['Compiler', 'Interpreter'], items: [['Translates the whole program first', 0], ['Reports all errors before running', 0], ['Runs line by line', 1], ['Stops at the faulty line while running', 1]] },
-        [['Python is usually…', ['Interpreted', 'Compiled to Mars', 'Hardware'], 0], ['A debugger helps…', ['Find bugs', 'Print paper', 'Cool CPU'], 0], ['An IDE contains…', ['Editor, runner, debugger', 'Only a mouse', 'A router'], 0]],
+        [['Python is usually…', ['Interpreted', 'Compiled to Mars', 'Hardware'], 0], ['A debugger helps…', ['Find bugs', 'Print paper', 'Cool CPU'], 0], ['An IDE contains…', ['Editor, runner, debugger', 'Only a mouse', 'A router'], 0], ['Object code is…', ['Binary machine code', 'Source text', 'A comment'], 0], ['Translators are…', ['Assemblers, compilers, interpreters', 'Monitors', 'Routers'], 0], ['Source code is…', ['Code written by the programmer', 'Binary output', 'A virus'], 0]],
         ['Compiler vs interpreter. IDE.']),
       T('setup', 'F2-2.2(c)', 'Install and configure a language', 'Kusakinisha lugha',
         ['To use Python: download the installer, tick "Add to PATH", install, then check with `python --version`. No computer? Use an online editor or this notebook.'],
