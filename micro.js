@@ -70,6 +70,17 @@ export const GIST = {
   branch: 'if/elif/else huchagua njia; nafasi (indent) zinaonyesha kilicho ndani.',
   debug: 'Hitilafu ni kosa; soma ujumbe wa kosa na rekebisha jambo moja kwa wakati.',
   project: 'Mradi: panga, andika msimbo, jaribu, kisha tafakari.',
+  'why-prog': 'Programu ni maelekezo ambayo kompyuta inaweza kufuata; hurahisisha kazi nyingi zinazojirudia.',
+  'how-prog-runs': 'Programu huhifadhiwa kwenye diski, hupakiwa kwenye RAM, kisha CPU huitekeleza; data yote ni binary.',
+  generations: 'Vizazi vitano vya lugha: mashine, assembly, 3GL (C), 4GL (Python, SQL), 5GL (Prolog).',
+  envs: 'IDE ina kihariri, mkalimani/kikusanyaji na kitafuta makosa; kihariri maandishi huandika tu.',
+  'prog-algo': 'Algorithimu ni hatua zenye mwisho na zilizo wazi; zichore kwa chati mtiririko au pseudocode kabla ya kuandika msimbo.',
+  dtypes: 'Aina za data: integer, float, character, string, boolean na array; stack ni LIFO, queue ni FIFO.',
+  decompose: 'Gawanya tatizo kubwa kuwa vipande vidogo na utatue kimoja kimoja.',
+  pdlc: 'Hatua saba: kufafanua tatizo, usanifu, uandishi, kutafuta makosa, majaribio, nyaraka, matengenezo.',
+  scratch: 'Scratch hujenga programu kwa vizibo; muda wa kuitikia = muda wa mwisho toa muda wa mwanzo.',
+  habits: 'Msimbo mzuri una majina yenye maana, maelezo, majaribio ya mara kwa mara na nakala za matoleo.',
+  careers: 'Programu hufungua kazi nyingi: msanidi programu, mchambuzi wa data, mtaalamu wa usalama mtandaoni.',
 };
 // Short-answer checkpoint questions, marked by keyword rubric (each inner list = synonyms for one mark, EN + SW).
 export const SHORT = {
