@@ -160,7 +160,7 @@ export const forms = {
         ['[[Branching]] chooses a path: `if / elif / else`. Indentation (4 spaces) shows what belongs inside. Extension: `while` and `for … in range()` repeat steps.'],
         { branching: ['maamuzi', 'Njia panda: kushoto au kulia', 'Choosing a path by a condition'] },
         { type: 'console', code: 'marks = 62\nif marks >= 80:\n    print("A")\nelif marks >= 50:\n    print("C")\nelse:\n    print("F")\nfor i in range(3):\n    print("Round", i)', task: 'Change marks and watch the branch.' },
-        [['elif means…', ['else if', 'end loop', 'error'], 0], ['What does range(3) give?', ['0 1 2', '1 2 3', '3'], 0], ['Code inside an if is…', ['Indented', 'Capitalised', 'Underlined'], 0]],
+        [['elif means…', ['else if', 'end loop', 'error'], 0], ['What does range(3) give?', ['0 1 2', '1 2 3', '3'], 0], ['Code inside an if is…', ['Indented', 'Capitalised', 'Underlined'], 0], ['The three control structures are…', ['Sequence, selection, iteration', 'Input, output, storage', 'Compile, link, run'], 0], ['A while loop repeats…', ['While a condition is true', 'Exactly once', 'Never'], 0], ['A decision in a flowchart is a…', ['Diamond', 'Oval', 'Arrow'], 0]],
         ['if/elif/else, indentation, loops.']),
       T('debug', 'F2-2.2(g)', 'Debugging', 'Kutafuta makosa',
         ['A [[bug]] is a mistake. Types: syntax (breaks the rules), runtime (crashes), logic (wrong answer). Read the error message, trace with print or Step, fix one thing at a time.'],
