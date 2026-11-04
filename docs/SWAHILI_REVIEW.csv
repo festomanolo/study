@@ -146,3 +146,6 @@ topic,field,english,swahili,reviewed,reviewer_notes
 "project","title","Mini project and checkpoint","Mradi mdogo","no",""
 "project","term:project","A task that builds something real","mradi","no",""
 "project","analogy:project","","Kazi ya kujenga kitu halisi","no",""
+"careers","title","Careers and the future of coding","Kazi na mustakabali wa programu","no",""
+"careers","term:career","Profession built on a skill","kazi ya kitaaluma","no",""
+"careers","analogy:career","","Njia ya maisha ya kazi","no",""
