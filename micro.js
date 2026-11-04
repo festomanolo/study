@@ -91,6 +91,11 @@ export const SHORT = {
   'F1-2.1': [{ q: 'State two properties of a good algorithm. (2 marks)', keys: [['finite', 'ends', 'kikomo'], ['ordered', 'definite', 'clear', 'unambiguous', 'input', 'output']] }],
   'F2-1.5': [{ q: 'Explain two red flags of a phishing message. (2 marks)', keys: [['urgent', 'urgency', 'haraka'], ['pin', 'password', 'prize', 'link', 'zawadi']] },
     { q: 'Differentiate the Internet from the WWW. (2 marks)', keys: [['network', 'mtandao'], ['web page', 'pages', 'kurasa']] }],
-  'F2-2.2': [{ q: 'Differentiate a compiler from an interpreter. (2 marks)', keys: [['whole program', 'entire program', 'all at once'], ['line by line', 'one line at a time', 'mstari']] }],
+  'F2-2.2': [{ q: 'Differentiate a compiler from an interpreter. (2 marks)', keys: [['whole program', 'entire program', 'all at once'], ['line by line', 'one line at a time', 'mstari']] },
+    { q: 'Define computer programming. (2 marks)', keys: [['instruction', 'step', 'maelekezo'], ['computer', 'execute', 'follow', 'kompyuta']] },
+    { q: 'State two disadvantages of low-level languages. (2 marks)', keys: [['not portable', 'machine dependent', 'machine-dependent', 'hard to debug', 'difficult to debug'], ['expertise', 'difficult', 'hard to learn', 'hard to write', 'complex']] },
+    { q: 'Name any two stages of the Program Development Life Cycle. (2 marks)', keys: [['problem definition', 'design'], ['coding', 'debugging', 'testing', 'documentation', 'maintenance']] },
+    { q: 'Differentiate a syntax error from a logic error. (2 marks)', keys: [['rules', 'will not run', 'grammar', 'syntax'], ['wrong answer', 'wrong result', 'incorrect', 'no error message', 'runs']] },
+    { q: 'List the three control structures. (3 marks)', keys: [['sequence'], ['selection', 'decision', 'branching', 'if'], ['iteration', 'loop', 'repetition']] }],
 };
 export const markShort = (ans, keys) => { const a = ans.toLowerCase(); return keys.map(g => g.some(k => a.includes(k))); };
