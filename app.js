@@ -249,8 +249,12 @@ function pageScene(f, n, ghost = false) {
   const grab = h('button', { class: 'dk-grab', 'aria-label': 'Show or hide tools', 'aria-expanded': 'false' }, h('i'), h('span', { class: 'dk-peek', 'aria-hidden': 'true' }, `${n + 1} / ${pgs.length}`));
   const sync = () => { const full = dock.offsetHeight; document.documentElement.style.setProperty('--dock-h', (hid ? 34 : full) + 'px'); };
   const setOpen = o => { open = o; dock.classList.toggle('tools-off', !o); grab.setAttribute('aria-expanded', o); tools.inert = !o || hid; moreBtn.classList.toggle('on', o); moreBtn.setAttribute('aria-expanded', o); if (!o) setPop(false); };
-  const grab = h('button', { class: 'dk-grab', 'aria-label': 'Show or hide tools' }, h('i'));
-  const setOpen = o => { open = o; dock.classList.toggle('tools-off', !o); grab.setAttribute('aria-expanded', o); tools.inert = !o; try { localStorage['manolo.dock'] = o ? '1' : '0'; } catch {} };
+  // Reading mode: the bar slides away while you scroll down and returns the moment you scroll up, reach the end, or tap the peek tab.
+  const setHide = x => { if (x === hid) return; hid = x; dock.classList.toggle('hide', x); mainRow.inert = x; tools.inert = !open || x; if (x) { setOpen(false); setPop(false); } sync(); };
+  let ly = null, acc = 0;
+  const onScroll = e => { const t = e.target; if (t.closest?.('.dock,.dk-pop')) return; const el = t === document ? document.scrollingElement : t; if (!el || el.clientHeight === undefined) return; const y = el.scrollTop; if (ly == null) { ly = y; return; } const d = y - ly; ly = y; acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
+    const end = el.scrollHeight - el.clientHeight - y < 90;
+    if (y < 40 || end || acc < -14) { setHide(false); } else if (acc > 18 && y > 140) setHide(true); };
   let gy = null; grab.addEventListener('pointerdown', e => { gy = e.clientY; grab.setPointerCapture(e.pointerId); });
   grab.addEventListener('pointerup', e => { if (gy == null) return; const dy = e.clientY - gy; gy = null; setOpen(dy < -14 ? true : dy > 14 ? false : !open); });
   grab.addEventListener('pointercancel', () => { gy = null; });
