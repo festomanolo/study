@@ -244,8 +244,11 @@ function pageScene(f, n, ghost = false) {
   const pop = h('div', { class: 'dk-pop', hidden: true, role: 'dialog', 'aria-label': 'Lighting' }, icon('light'), light, icon('light'));
   const lightBtn = tool('light', 'Light', { 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onclick: e => { e.stopPropagation(); setPop(pop.hidden); } });
   const setPop = open => { pop.hidden = !open; lightBtn.classList.toggle('on', open); lightBtn.setAttribute('aria-expanded', open); };
-  const outside = e => { if (!pop.hidden && !pop.contains(e.target) && !lightBtn.contains(e.target)) setPop(false); }, esc = e => { if (e.key === 'Escape') setPop(false); };
-  let open = true; try { open = localStorage['manolo.dock'] !== '0'; } catch {}
+  const outside = e => { if (!pop.hidden && !pop.contains(e.target) && !lightBtn.contains(e.target)) setPop(false); if (open && !dock.contains(e.target)) setOpen(false); }, esc = e => { if (e.key === 'Escape') setPop(false); };
+  let open = false, hid = false;
+  const grab = h('button', { class: 'dk-grab', 'aria-label': 'Show or hide tools', 'aria-expanded': 'false' }, h('i'), h('span', { class: 'dk-peek', 'aria-hidden': 'true' }, `${n + 1} / ${pgs.length}`));
+  const sync = () => { const full = dock.offsetHeight; document.documentElement.style.setProperty('--dock-h', (hid ? 34 : full) + 'px'); };
+  const setOpen = o => { open = o; dock.classList.toggle('tools-off', !o); grab.setAttribute('aria-expanded', o); tools.inert = !o || hid; moreBtn.classList.toggle('on', o); moreBtn.setAttribute('aria-expanded', o); if (!o) setPop(false); };
   const grab = h('button', { class: 'dk-grab', 'aria-label': 'Show or hide tools' }, h('i'));
   const setOpen = o => { open = o; dock.classList.toggle('tools-off', !o); grab.setAttribute('aria-expanded', o); tools.inert = !o; try { localStorage['manolo.dock'] = o ? '1' : '0'; } catch {} };
   let gy = null; grab.addEventListener('pointerdown', e => { gy = e.clientY; grab.setPointerCapture(e.pointerId); });
