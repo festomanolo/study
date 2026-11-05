@@ -33,6 +33,22 @@ function applySettings() {
 }
 const spread = (sheet, clip) => h('div', { class: 'spread' }, h('div', { class: 'glimpse' }), h('div', { class: 'pages' }, sheet, clip || null, h('div', { class: 'grain' }), h('div', { class: 'light' }), h('div', { class: 'stampbrand' }, 'MANOLO'), h('div', { class: 'mark' }, 'festomanolo.com')));
 const reduced = () => document.documentElement.classList.contains('reduce');
+// ---- dock icons: stroke-based, SF-Symbols-like (24px grid, round caps) ----
+const ICONS = {
+  contents: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="18" r=".6"/>',
+  prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>',
+  pack: '<path d="M9 7V6a3 3 0 016 0v1"/><rect x="5" y="7" width="14" height="14" rx="4.5"/><path d="M9 15h6M9 11.5h6"/>',
+  translate: '<path d="M3.5 6h9M8 4v2M5.5 6c.6 3.6 3 6.4 6 8M11.5 6c-.6 3.6-3 6.4-6.5 8.2"/><path d="M12.5 20l4-9 4 9M14 16.8h5"/>',
+  flow: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
+  recall: '<path d="M12 3.5l9 4.8-9 4.8-9-4.8z"/><path d="M3 12.6l9 4.8 9-4.8M3 16.8l9 4.7 9-4.7" opacity=".55"/>',
+  voice: '<path d="M4 9.5v5h3.5L13 19V5L7.5 9.5z"/><path d="M16.5 9a4.2 4.2 0 010 6M19 6.5a7.7 7.7 0 010 11"/>',
+  copy: '<path d="M7 3.5h7.5L19 8v12.5H7z"/><path d="M14.5 3.5V8H19M10 12.5h6M10 16.5h6"/>',
+  edit: '<path d="M4 20l.9-4L16 4.9a1.8 1.8 0 012.6 0l.5.5a1.8 1.8 0 010 2.6L8 19.1z"/><path d="M13.8 7.2l3 3"/>',
+  ink: '<path d="M12 3.2c3.8 4.6 6 7.8 6 10.8a6 6 0 01-12 0c0-3 2.2-6.2 6-10.8z"/>',
+  light: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
+};
+const icon = n => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'ic'); s.innerHTML = ICONS[n]; return s; };
+const tool = (n, label, a = {}) => h('button', { class: 'dk-tool', ...a }, icon(n), h('span', { class: 'lbl' }, label));
 
 // ---- audio: synthetic chimes (0 KB) + local neural TTS (/api/tts with Web Speech fallback) ----
 let ac, curAudio = null;
