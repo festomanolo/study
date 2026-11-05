@@ -479,7 +479,7 @@ let demoT;
 let deferred; addEventListener('beforeinstallprompt', e => { e.preventDefault(); if (+(localStorage['manolo.visits'] || 0) >= 2) { deferred = e; document.body.append(h('button', { class: 'install', style: 'bottom:calc(var(--dock-h,0px) + 12px)', onclick() { deferred.prompt(); this.remove(); } }, icon('install'), 'Install app')); } });
 try { localStorage['manolo.visits'] = +(localStorage['manolo.visits'] || 0) + 1; } catch {}
 
-// ---- settings ----
+// ---- settings: an iOS-style sheet (grouped list, switches, segmented controls) ----
 function settings() {
   const row = (label, el) => h('label', {}, label, el);
   const chk = (k, fn) => h('input', { type: 'checkbox', ...(S.set[k] ? { checked: true } : {}), onchange: e => { S.set[k] = e.target.checked; save(); applySettings(); fn?.(); } });
