@@ -223,7 +223,7 @@ function pageScene(f, n, ghost = false) {
     const next = () => { sheet.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')); if (!talking || i >= blocks.length) return stopTalk(); const b = blocks[i++]; b.classList.add('hl'); b.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); if (blocks[i]) ttsPrefetch(blocks[i].textContent); ttsSpeak(b.textContent, { rate: S.set.rate, onEnd: next, onError: stopTalk }); };
     next();
   };
-  const voice = h('button', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' }, '🔊 Mwalimu');
+  const voice = tool('voice', 'Mwalimu', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' });
   const clip = h('button', { class: 'clip', onclick: talk, title: 'Tap to hear Mwalimu', 'aria-label': 'Hear Mwalimu' }, h('span', {}, '📎'));
   let wl = null; const copyOff = () => { sheet.classList.remove('copymode'); copyBtn.classList.remove('on'); wl?.release?.().catch(() => {}); wl = null; };
   const copyBtn = h('button', { title: 'Number the lines and keep the screen on while you copy into your exercise book', onclick: async () => {
