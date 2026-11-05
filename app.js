@@ -41,7 +41,7 @@ const NEURAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
 function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c && NEURAL) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
 function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
   ttsStop(); const c = t.replace(/✏️?/g, '').trim(); if (!c) return onEnd?.();
-  const a = new Audio('/api/tts?text=' + encodeURIComponent(c)); curAudio = a; a.playbackRate = rate || 1;
+  const a = new Audio(NEURAL ? '/api/tts?text=' + encodeURIComponent(c) : undefined); curAudio = a; a.playbackRate = rate || 1;
   a.onended = () => { if (curAudio === a) curAudio = null; onEnd?.(); };
   a.onerror = () => {
     if (curAudio === a) curAudio = null;
