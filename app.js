@@ -36,6 +36,7 @@ const reduced = () => document.documentElement.classList.contains('reduce');
 let ac, curAudio = null;
 function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.value = .05; o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch {} }
 function ttsStop() { if (curAudio) { try { curAudio.pause(); curAudio.src = ''; } catch {} curAudio = null; } try { speechSynthesis.cancel(); } catch {} }
+// The neural voice only exists on the local dev server; the published site uses the browser voice.
 function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
 function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
   ttsStop(); const c = t.replace(/✏️?/g, '').trim(); if (!c) return onEnd?.();
