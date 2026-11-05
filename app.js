@@ -487,9 +487,13 @@ function settings() {
   const row = (label, el, sub) => h('label', { class: 'sx-row' }, h('span', { class: 'sx-l' }, label, sub ? h('small', {}, sub) : null), el);
   const sw = (k, fn) => h('input', { type: 'checkbox', role: 'switch', class: 'sx-sw', ...(S.set[k] ? { checked: true } : {}), onchange: e => { S.set[k] = e.target.checked; save(); applySettings(); fn?.(); } });
   const seg = (key, opts, cur) => { const box = h('div', { class: 'sx-seg', role: 'radiogroup', style: `--n:${opts.length};--i:${Math.max(0, opts.findIndex(o => o[0] === cur))}` }, h('i')); opts.forEach(([v, l], i) => box.append(h('button', { role: 'radio', 'aria-checked': v === cur, onclick: () => { S.set[key] = v; save(); applySettings(); box.style.setProperty('--i', i); box.querySelectorAll('button').forEach((x, j) => x.setAttribute('aria-checked', j === i)); } }, l))); return box; };
-    h('b', {}, 'Settings / Mipangilio'),
-    row('Swahili layer (margins, errors)', chk('sw')), row('Reduced motion', chk('reduce')), row('Readable font (no handwriting)', chk('readable')),
-    row('Text size', h('select', { onchange: e => { S.set.fs = +e.target.value; save(); applySettings(); } }, [[.9, 'S'], [1, 'M'], [1.2, 'L']].map(([v, l]) => h('option', { value: v, ...(S.set.fs === v ? { selected: true } : {}) }, l)))),
+  const stack = (label, el, sub) => h('div', { class: 'sx-row stack' }, h('span', { class: 'sx-l' }, label, sub ? h('small', {}, sub) : null), el);
+  const action = (label, fn, cls = '') => h('button', { class: 'sx-row sx-act ' + cls, onclick: fn }, h('span', { class: 'sx-l' }, label));
+  let armed = 0;
+  const reset = action('Reset progress', () => { if (!armed) { armed = setTimeout(() => { armed = 0; reset.firstChild.textContent = 'Reset progress'; reset.classList.remove('armed'); }, 4000); reset.firstChild.textContent = 'Tap again to erase all progress'; reset.classList.add('armed'); return; } clearTimeout(armed); S = structuredClone(DEF); save(); applySettings(); done(); route(); }, 'danger');
+  const grab = h('div', { class: 'sx-grab' }, h('i'));
+  const panel = h('div', { class: 'sx', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Settings' }, grab,
+    h('header', {}, h('span', {}), h('b', {}, 'Settings'), h('button', { class: 'sx-done', onclick: done }, 'Done')),
     row('Quality', h('select', { onchange: e => { S.set.quality = e.target.value; save(); applySettings(); } }, ['auto', 'low', 'high'].map(v => h('option', { value: v, ...(S.set.quality === v ? { selected: true } : {}) }, v)))),
     row('Voice speed', h('input', { type: 'range', min: .5, max: 1.5, step: .1, value: S.set.rate, onchange: e => { S.set.rate = +e.target.value; save(); } })),
     h('button', { onclick: exportProgress }, 'Export progress (teacher view)'),
