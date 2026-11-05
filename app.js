@@ -45,6 +45,8 @@ const ICONS = {
   copy: '<path d="M7 3.5h7.5L19 8v12.5H7z"/><path d="M14.5 3.5V8H19M10 12.5h6M10 16.5h6"/>',
   edit: '<path d="M4 20l.9-4L16 4.9a1.8 1.8 0 012.6 0l.5.5a1.8 1.8 0 010 2.6L8 19.1z"/><path d="M13.8 7.2l3 3"/>',
   ink: '<path d="M12 3.2c3.8 4.6 6 7.8 6 10.8a6 6 0 01-12 0c0-3 2.2-6.2 6-10.8z"/>',
+  gear: '<path d="M4 7h9M18 7h2M4 17h2M11 17h9"/><circle cx="15.5" cy="7" r="2.5"/><circle cx="8.5" cy="17" r="2.5"/>',
+  install: '<path d="M12 4v11M7.5 10.8l4.5 4.5 4.5-4.5M5 19.5h14"/>',
   light: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
 };
 const icon = n => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'ic'); s.innerHTML = ICONS[n]; return s; };
