@@ -103,7 +103,7 @@ html,body{background:radial-gradient(circle at 50% 25%,#232730 0%,#0d0f12 80%) f
 .dk-pop[hidden]{display:none}.dk-pop .ic{width:18px;height:18px;opacity:.7}.dk-pop .ic:first-child{width:14px;height:14px;opacity:.5}
 .dk-pop input{width:min(220px,52vw);accent-color:#0a84ff;height:28px;margin:0}
 @keyframes dk-pop{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(.92)}}
-.scene{padding-bottom:calc(var(--dock-h,120px) + 24px)}
+.scene{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 @media(max-width:520px){.dock{padding-inline:6px}.dk-pg{min-width:92px}.dk-tool{flex-basis:64px}}
 @media(prefers-reduced-transparency:reduce){.dock,.dk-pop{background:#1c1c1e;-webkit-backdrop-filter:none;backdrop-filter:none}}
 @media(prefers-contrast:more){.dock{background:#000;box-shadow:0 0 0 1.5px #fff}.dk-tool,.dk-step{color:#fff}.dk-pg span{color:#ddd}}
