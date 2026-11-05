@@ -268,12 +268,13 @@ function pageScene(f, n, ghost = false) {
     tool('translate', 'Fafanua', { class: 'dk-tool' + (S.set.sw ? ' on' : ''), 'aria-pressed': !!S.set.sw, onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }),
     tool('flow', 'Data Flow', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }),
     tool('recall', 'Recall', { onclick: withDiagram('recall'), disabled: !want, title: 'Active recall: hide the labels and put them back' }),
-    voice, copyBtn, edit, inkBtn, lightBtn));
-  const dock = h('nav', { class: 'dock', 'aria-label': 'Page navigation' }, pop, grab,
-    h('div', { class: 'dk-main' }, h('button', { class: 'dk-step', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents', title: 'Contents' }, icon('contents')), h('span', { class: 'dk-sp' }), step('prev', 'Previous page', n - 1, n === 0), pager, step('next', 'Next page', n + 1, n === total - 1), h('span', { class: 'dk-sp' }), h('button', { class: 'dk-step', onclick: () => go('#/bag'), 'aria-label': 'Backpack', title: 'Backpack' }, icon('pack'))),
-    tools);
-  setOpen(open);
-  const ro = new ResizeObserver(() => { if (!dock.isConnected) return ro.disconnect(); document.documentElement.style.setProperty('--dock-h', dock.offsetHeight + 'px'); }); ro.observe(dock);
+    voice, copyBtn, edit, inkBtn, lightBtn,
+    tool('pack', 'Library', { onclick: () => go('#/bag'), title: 'Backpack' }),
+    tool('gear', 'Settings', { onclick: settings })));
+  const mainRow = h('div', { class: 'dk-main' }, h('button', { class: 'dk-step', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents', title: 'Contents' }, icon('contents')), h('span', { class: 'dk-sp' }), step('prev', 'Previous page', n - 1, n === 0), pager, step('next', 'Next page', n + 1, n === total - 1), h('span', { class: 'dk-sp' }), moreBtn);
+  const dock = h('nav', { class: 'dock', 'aria-label': 'Page navigation' }, pop, grab, mainRow, tools);
+  setOpen(false);
+  const ro = new ResizeObserver(() => { if (!dock.isConnected) return ro.disconnect(); sync(); }); ro.observe(dock);
   const nav = dock;
 
   const ear = h('button', { class: 'dogear' + (S.dogear[pg.id] ? ' on' : ''), 'aria-label': 'Fold page corner for revision', 'aria-pressed': !!S.dogear[pg.id], onclick() { if (S.dogear[pg.id]) delete S.dogear[pg.id]; else S.dogear[pg.id] = 1; save(); this.classList.toggle('on'); this.setAttribute('aria-pressed', !!S.dogear[pg.id]); chime(420, .04); say(S.dogear[pg.id] ? 'Corner folded. Listed in Contents.' : 'Corner unfolded.'); } });
