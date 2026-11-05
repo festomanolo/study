@@ -256,7 +256,9 @@ function pageScene(f, n, ghost = false) {
     const end = el.scrollHeight - el.clientHeight - y < 90;
     if (y < 40 || end || acc < -14) { setHide(false); } else if (acc > 18 && y > 140) setHide(true); };
   let gy = null; grab.addEventListener('pointerdown', e => { gy = e.clientY; grab.setPointerCapture(e.pointerId); });
-  grab.addEventListener('pointerup', e => { if (gy == null) return; const dy = e.clientY - gy; gy = null; setOpen(dy < -14 ? true : dy > 14 ? false : !open); });
+  grab.addEventListener('pointerup', e => { if (gy == null) return; const dy = e.clientY - gy; gy = null;
+    if (hid) return setHide(false);
+    if (dy < -14) setOpen(true); else if (dy > 14) { if (open) setOpen(false); else setHide(true); } else setOpen(!open); });
   grab.addEventListener('pointercancel', () => { gy = null; });
   const total = pgs.length;
   const pager = h('button', { class: 'dk-pg', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': `Page ${n + 1} of ${total}. Open contents` }, h('b', {}, n + 1), h('span', {}, `of ${total}`), h('i', { style: `--p:${total > 1 ? n / (total - 1) : 1}` }));
