@@ -225,8 +225,8 @@ function pageScene(f, n, ghost = false) {
   };
   const voice = tool('voice', 'Mwalimu', { onclick: talk, 'aria-label': 'Mwalimu voice', title: 'Mwalimu reads the page and highlights each line' });
   const clip = h('button', { class: 'clip', onclick: talk, title: 'Tap to hear Mwalimu', 'aria-label': 'Hear Mwalimu' }, h('span', {}, '📎'));
-  let wl = null; const copyOff = () => { sheet.classList.remove('copymode'); copyBtn.classList.remove('on'); wl?.release?.().catch(() => {}); wl = null; };
-  const copyBtn = h('button', { title: 'Number the lines and keep the screen on while you copy into your exercise book', onclick: async () => {
+  let wl = null; const copyOff = () => { sheet.classList.remove('copymode'); copyBtn.classList.remove('on'); copyBtn.querySelector('.lbl').textContent = 'Copy'; wl?.release?.().catch(() => {}); wl = null; };
+  const copyBtn = tool('copy', 'Copy', { title: 'Nakili Daftarini — number the lines and keep the screen on while you copy into your exercise book', onclick: async () => {
     if (sheet.classList.contains('copymode')) return copyOff();
     sheet.classList.add('copymode'); copyBtn.classList.add('on'); pencil.hidden = true;
     const lh = parseFloat(getComputedStyle(sheet).lineHeight) || 28, lines = Math.round(sheet.scrollHeight / lh);
