@@ -501,9 +501,13 @@ function settings() {
       group('Voice', stack('Speaking speed', h('div', { class: 'sx-rate' }, h('small', {}, 'Slow'), h('input', { type: 'range', min: .5, max: 1.5, step: .1, value: S.set.rate, 'aria-label': 'Speaking speed', onchange: e => { S.set.rate = +e.target.value; save(); } }), h('small', {}, 'Fast')))),
       group('Data', action('Export progress (teacher view)', exportProgress), reset)));
   const ov = h('div', { class: 'sx-ov', onpointerdown: e => { if (e.target === ov) done(); } }, panel);
-    h('button', { onclick: () => { if (confirm('Reset all progress?')) { S = structuredClone(DEF); save(); applySettings(); dlg.remove(); route(); } } }, 'Reset progress'),
-    h('button', { class: 'pri', onclick: () => dlg.remove() }, 'Close')));
-  document.body.append(dlg); dlg.querySelector('input,button')?.focus();
+  // drag the handle down: 1:1 tracking, then dismiss by position or velocity, else spring back
+  let y0 = null, last = 0, vel = 0, t0 = 0;
+  grab.addEventListener('pointerdown', e => { y0 = e.clientY; t0 = e.timeStamp; vel = 0; grab.setPointerCapture(e.pointerId); panel.style.transition = 'none'; });
+  grab.addEventListener('pointermove', e => { if (y0 == null) return; const dy = Math.max(0, e.clientY - y0); vel = (dy - last) / Math.max(1, e.timeStamp - t0); last = dy; t0 = e.timeStamp; panel.style.transform = `translateY(${dy}px)`; });
+  const end = () => { if (y0 == null) return; y0 = null; panel.style.transition = ''; if (last > 120 || vel > .6) { panel.style.transform = 'translateY(100%)'; done(); } else panel.style.transform = ''; last = 0; };
+  grab.addEventListener('pointerup', end); grab.addEventListener('pointercancel', end);
+  addEventListener('keydown', onKey); document.body.append(ov); ov.querySelector('.sx-done').focus();
 }
 function exportProgress() {
   const rows = ['learner,topic,lab,best_quiz,understanding_pct,level,misconceptions']; for (const f of Object.values(forms)) for (const u of f.units) for (const t of u.topics) rows.push(`${(S.name || 'Learner').replace(/,/g, ' ')},${t.code.replace(/,/g, ';')} ${t.id},${S.lab[t.id] ? 1 : 0},${Math.round((S.quiz[t.id] || 0) * 100)},${Lr().mastery(t.id) === null ? '' : Math.round(Lr().mastery(t.id) * 100)},${Lr().level(t.id)},${Lr().tagsFor(t.id).join(' ')}`);
