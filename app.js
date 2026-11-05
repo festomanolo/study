@@ -263,6 +263,7 @@ function pageScene(f, n, ghost = false) {
   const total = pgs.length;
   const pager = h('button', { class: 'dk-pg', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': `Page ${n + 1} of ${total}. Open contents` }, h('b', {}, n + 1), h('span', {}, `of ${total}`), h('i', { style: `--p:${total > 1 ? n / (total - 1) : 1}` }));
   const step = (name, label, to, off) => h('button', { class: 'dk-step', disabled: off, onclick: () => go(`#/cs/${f}/p/${to}`), 'aria-label': label }, icon(name));
+  const moreBtn = h('button', { class: 'dk-step dk-more', 'aria-label': 'Study tools', 'aria-expanded': 'false', title: 'Study tools', onclick: () => setOpen(!open) }, icon('apps'));
   const tools = h('div', { class: 'dk-tools' }, h('div', { class: 'dk-scroll', role: 'toolbar', 'aria-label': 'Study tools' },
     tool('translate', 'Fafanua', { class: 'dk-tool' + (S.set.sw ? ' on' : ''), 'aria-pressed': !!S.set.sw, onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }),
     tool('flow', 'Data Flow', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }),
