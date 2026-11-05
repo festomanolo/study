@@ -38,7 +38,7 @@ function chime(f = 660, d = .08) { try { ac ||= new AudioContext(); const o = ac
 function ttsStop() { if (curAudio) { try { curAudio.pause(); curAudio.src = ''; } catch {} curAudio = null; } try { speechSynthesis.cancel(); } catch {} }
 // The neural voice only exists on the local dev server; the published site uses the browser voice.
 const NEURAL = /^(localhost|127\.|\[::1\])/.test(location.hostname);
-function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
+function ttsPrefetch(t) { const c = t.replace(/✏️?/g, '').trim(); if (c && NEURAL) fetch('/api/tts?text=' + encodeURIComponent(c)).catch(() => {}); }
 function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
   ttsStop(); const c = t.replace(/✏️?/g, '').trim(); if (!c) return onEnd?.();
   const a = new Audio('/api/tts?text=' + encodeURIComponent(c)); curAudio = a; a.playbackRate = rate || 1;
