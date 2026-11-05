@@ -518,7 +518,7 @@ const CACHE_V = 'manolo-v8';
 window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').then(r => r.addEventListener('updatefound', () => r.installing.addEventListener('statechange', function () { if (this.state === 'installed' && navigator.serviceWorker.controller) document.body.append(h('button', { class: 'pri', style: 'position:fixed;bottom:8px;right:8px;z-index:8', onclick: () => location.reload() }, 'New lessons available — tap to refresh')); }))).catch(() => {});
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').then(r => r.addEventListener('updatefound', () => r.installing.addEventListener('statechange', function () { if (this.state === 'installed' && navigator.serviceWorker.controller) document.body.append(h('button', { class: 'install', style: 'bottom:calc(var(--dock-h,0px) + 12px);left:auto;right:12px', onclick: () => location.reload() }, 'New lessons available — tap to refresh')); }))).catch(() => {});
 
 // ---- HTML lab: write a page, see it live, tick the checks ----
 function htmlLab(box, t, L) {
