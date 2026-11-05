@@ -250,10 +250,18 @@ function pageScene(f, n, ghost = false) {
   grab.addEventListener('pointercancel', () => { gy = null; });
   const total = pgs.length;
   const pager = h('button', { class: 'dk-pg', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': `Page ${n + 1} of ${total}. Open contents` }, h('b', {}, n + 1), h('span', {}, `of ${total}`), h('i', { style: `--p:${total > 1 ? n / (total - 1) : 1}` }));
-    h('button', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }, '⚡ Data Flow'),
-    h('button', { onclick: withDiagram('recall'), disabled: !want, title: 'Hide the labels and put them back' }, '🧩 Active Recall'),
-    voice, copyBtn, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
-    h('button', { onclick: () => go('#/bag'), 'aria-label': 'Backpack' }, '🎒'));
+  const step = (name, label, to, off) => h('button', { class: 'dk-step', disabled: off, onclick: () => go(`#/cs/${f}/p/${to}`), 'aria-label': label }, icon(name));
+  const tools = h('div', { class: 'dk-tools' }, h('div', { class: 'dk-scroll', role: 'toolbar', 'aria-label': 'Study tools' },
+    tool('translate', 'Fafanua', { class: 'dk-tool' + (S.set.sw ? ' on' : ''), 'aria-pressed': !!S.set.sw, onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }),
+    tool('flow', 'Data Flow', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }),
+    tool('recall', 'Recall', { onclick: withDiagram('recall'), disabled: !want, title: 'Active recall: hide the labels and put them back' }),
+    voice, copyBtn, edit, inkBtn, lightBtn));
+  const dock = h('nav', { class: 'dock', 'aria-label': 'Page navigation' }, pop, grab,
+    h('div', { class: 'dk-main' }, h('button', { class: 'dk-step', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents', title: 'Contents' }, icon('contents')), h('span', { class: 'dk-sp' }), step('prev', 'Previous page', n - 1, n === 0), pager, step('next', 'Next page', n + 1, n === total - 1), h('span', { class: 'dk-sp' }), h('button', { class: 'dk-step', onclick: () => go('#/bag'), 'aria-label': 'Backpack', title: 'Backpack' }, icon('pack'))),
+    tools);
+  setOpen(open);
+  const ro = new ResizeObserver(() => { if (!dock.isConnected) return ro.disconnect(); document.documentElement.style.setProperty('--dock-h', dock.offsetHeight + 'px'); }); ro.observe(dock);
+  const nav = dock;
 
   const ear = h('button', { class: 'dogear' + (S.dogear[pg.id] ? ' on' : ''), 'aria-label': 'Fold page corner for revision', 'aria-pressed': !!S.dogear[pg.id], onclick() { if (S.dogear[pg.id]) delete S.dogear[pg.id]; else S.dogear[pg.id] = 1; save(); this.classList.toggle('on'); this.setAttribute('aria-pressed', !!S.dogear[pg.id]); chime(420, .04); say(S.dogear[pg.id] ? 'Corner folded. Listed in Contents.' : 'Corner unfolded.'); } });
   const datebox = h('div', { class: 'datebox' }, 'Date: ', h('span', { class: 'pen' }, S.dates[pg.id] || '__/__/____'), h('br'), 'Page No. ', h('span', { class: 'pen' }, n + 1));
