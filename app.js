@@ -474,7 +474,7 @@ function demo() {
 let demoT;
 
 // ---- install / update prompts ----
-let deferred; addEventListener('beforeinstallprompt', e => { e.preventDefault(); if (+(localStorage['manolo.visits'] || 0) >= 2) { deferred = e; document.body.append(h('button', { class: 'pri', style: 'position:fixed;bottom:8px;left:8px;z-index:8', onclick() { deferred.prompt(); this.remove(); } }, '📲 Install app')); } });
+let deferred; addEventListener('beforeinstallprompt', e => { e.preventDefault(); if (+(localStorage['manolo.visits'] || 0) >= 2) { deferred = e; document.body.append(h('button', { class: 'pri', style: 'position:fixed;bottom:calc(var(--dock-h,0px) + 12px);left:12px;z-index:8', onclick() { deferred.prompt(); this.remove(); } }, '📲 Install app')); } });
 try { localStorage['manolo.visits'] = +(localStorage['manolo.visits'] || 0) + 1; } catch {}
 
 // ---- settings ----
