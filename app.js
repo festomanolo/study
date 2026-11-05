@@ -481,9 +481,12 @@ try { localStorage['manolo.visits'] = +(localStorage['manolo.visits'] || 0) + 1;
 
 // ---- settings: an iOS-style sheet (grouped list, switches, segmented controls) ----
 function settings() {
-  const row = (label, el) => h('label', {}, label, el);
-  const chk = (k, fn) => h('input', { type: 'checkbox', ...(S.set[k] ? { checked: true } : {}), onchange: e => { S.set[k] = e.target.checked; save(); applySettings(); fn?.(); } });
-  const dlg = h('div', { class: 'scene', style: 'background:#000a;z-index:9' }, h('div', { class: 'settings', role: 'dialog', 'aria-label': 'Settings' },
+  const done = () => { removeEventListener('keydown', onKey); if (reduced()) return ov.remove(); ov.classList.add('out'); setTimeout(() => ov.remove(), 280); };
+  const onKey = e => { if (e.key === 'Escape') done(); };
+  const group = (head, ...rows) => h('section', { class: 'sx-g' }, head ? h('h3', {}, head) : null, h('div', { class: 'sx-list' }, ...rows));
+  const row = (label, el, sub) => h('label', { class: 'sx-row' }, h('span', { class: 'sx-l' }, label, sub ? h('small', {}, sub) : null), el);
+  const sw = (k, fn) => h('input', { type: 'checkbox', role: 'switch', class: 'sx-sw', ...(S.set[k] ? { checked: true } : {}), onchange: e => { S.set[k] = e.target.checked; save(); applySettings(); fn?.(); } });
+  const seg = (key, opts, cur) => { const box = h('div', { class: 'sx-seg', role: 'radiogroup', style: `--n:${opts.length};--i:${Math.max(0, opts.findIndex(o => o[0] === cur))}` }, h('i')); opts.forEach(([v, l], i) => box.append(h('button', { role: 'radio', 'aria-checked': v === cur, onclick: () => { S.set[key] = v; save(); applySettings(); box.style.setProperty('--i', i); box.querySelectorAll('button').forEach((x, j) => x.setAttribute('aria-checked', j === i)); } }, l))); return box; };
     h('b', {}, 'Settings / Mipangilio'),
     row('Swahili layer (margins, errors)', chk('sw')), row('Reduced motion', chk('reduce')), row('Readable font (no handwriting)', chk('readable')),
     row('Text size', h('select', { onchange: e => { S.set.fs = +e.target.value; save(); applySettings(); } }, [[.9, 'S'], [1, 'M'], [1.2, 'L']].map(([v, l]) => h('option', { value: v, ...(S.set.fs === v ? { selected: true } : {}) }, l)))),
