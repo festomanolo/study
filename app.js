@@ -269,7 +269,7 @@ function pageScene(f, n, ghost = false) {
   scene(sp, tray, hud, nav);
   applyJitter(sheet);
   if (dg && !ghost) { let p; try { p = sessionStorage.getItem('manolo.pending'); sessionStorage.removeItem('manolo.pending'); } catch {} if (p) setTimeout(() => p === 'sim' ? dg.sim(hud) : dg.recall(tray), 350); }
-  if (!ghost) { const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); dg?.destroy(); stopTalk(); copyOff(); }; }
+  if (!ghost) { addEventListener('pointerdown', outside); addEventListener('keydown', esc); const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); removeEventListener('pointerdown', outside); removeEventListener('keydown', esc); ro.disconnect(); document.documentElement.style.removeProperty('--dock-h'); dg?.destroy(); stopTalk(); copyOff(); }; }
 }
 function diagramBlock(sheet, t, pencil) {
   const dg = makeDiagram(DIAGRAMS[t.id], { chime, say, onInfo: (label, info) => { pencil.hidden = false; pencil.replaceChildren(h('b', {}, '✏ ' + label), h('br'), info); } });
