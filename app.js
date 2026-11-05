@@ -280,7 +280,7 @@ function pageScene(f, n, ghost = false) {
   const ear = h('button', { class: 'dogear' + (S.dogear[pg.id] ? ' on' : ''), 'aria-label': 'Fold page corner for revision', 'aria-pressed': !!S.dogear[pg.id], onclick() { if (S.dogear[pg.id]) delete S.dogear[pg.id]; else S.dogear[pg.id] = 1; save(); this.classList.toggle('on'); this.setAttribute('aria-pressed', !!S.dogear[pg.id]); chime(420, .04); say(S.dogear[pg.id] ? 'Corner folded. Listed in Contents.' : 'Corner unfolded.'); } });
   const datebox = h('div', { class: 'datebox' }, 'Date: ', h('span', { class: 'pen' }, S.dates[pg.id] || '__/__/____'), h('br'), 'Page No. ', h('span', { class: 'pen' }, n + 1));
   const sp = spread(sheet, clip); sp.querySelector('.pages').append(ear, datebox);
-  scene(sp, tray, hud, nav);
+  scene(sp, tray, hud, nav); $.querySelector('.hud')?.remove();
   applyJitter(sheet);
   if (dg && !ghost) { let p; try { p = sessionStorage.getItem('manolo.pending'); sessionStorage.removeItem('manolo.pending'); } catch {} if (p) setTimeout(() => p === 'sim' ? dg.sim(hud) : dg.recall(tray), 350); }
   if (!ghost) { addEventListener('pointerdown', outside); addEventListener('keydown', esc); const key = e => { if (/INPUT|TEXTAREA/.test(e.target.tagName)) return; if (e.key === 'ArrowRight' && n < pgs.length - 1) go(`#/cs/${f}/p/${n + 1}`); if (e.key === 'ArrowLeft' && n > 0) go(`#/cs/${f}/p/${n - 1}`); }; addEventListener('keydown', key); cur = () => { removeEventListener('keydown', key); removeEventListener('pointerdown', outside); removeEventListener('keydown', esc); ro.disconnect(); document.documentElement.style.removeProperty('--dock-h'); dg?.destroy(); stopTalk(); copyOff(); }; }
