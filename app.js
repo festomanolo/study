@@ -118,7 +118,7 @@ function route() {
 }
 function scene(...k) { cur?.(); cur = null; $.replaceChildren(h('div', { class: 'scene' }, ...k), hud()); $.firstChild.focus?.(); }
 function hud() {
-  return h('div', { class: 'hud' }, h('button', { 'aria-label': 'Settings', onclick: settings }, '⚙ Settings'));
+  return h('div', { class: 'hud' }, h('button', { class: 'hud-btn', 'aria-label': 'Settings', title: 'Settings', onclick: settings }, icon('gear')));
 }
 
 // ---- boot ----
