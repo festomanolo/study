@@ -211,7 +211,9 @@ export const codeQs = {
   'F2-2.2': [{ prompt: 'Read two ints a and b with input() and print their sum.', tests: [{ in: ['2', '3'], out: '5' }, { in: ['10', '-4'], out: '6' }] },
     { prompt: 'Read marks with input(); print "Pass" if marks >= 50 else "Fail".', tests: [{ in: ['70'], out: 'Pass' }, { in: ['49'], out: 'Fail' }] }],
 };
-export const labTypes = ['boda', 'conveyor', 'packets', 'files', 'types', 'ops', 'constants', 'fork', 'rooms', 'loopbelt', 'bughunt', 'tracetable', 'search', 'email', 'buildpc', 'generations', 'layercake', 'backup', 'flowrun', 'console', 'sort', 'order', 'ladder', 'hot', 'pwd', 'flow'];
+import { webUnit } from './web.js';
+forms.f2.units.push(webUnit);
+export const labTypes = ['html', 'boda', 'conveyor', 'packets', 'files', 'types', 'ops', 'constants', 'fork', 'rooms', 'loopbelt', 'bughunt', 'tracetable', 'search', 'email', 'buildpc', 'generations', 'layercake', 'backup', 'flowrun', 'console', 'sort', 'order', 'ladder', 'hot', 'pwd', 'flow'];
 
 // Extra (bespoke) labs per topic, and hook lines.
 const LABS = { lang: ['boda'], tools: ['conveyor'], internet: ['packets', 'search', 'email'], 'install-files': ['files'], vars: ['types', 'ops', 'constants'], branch: ['fork', 'rooms', 'loopbelt'], debug: ['bughunt', 'tracetable'], hardware: ['buildpc', 'generations'], software: ['layercake'], handling: ['backup'], flowcharts: ['flowrun'] };

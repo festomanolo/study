@@ -140,3 +140,5 @@ u.mark{text-decoration:2px underline #c0392b;text-underline-offset:3px;color:var
 .board{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#14532d;padding:8px;border-radius:6px}.board .slot{background:#166534;color:#dcfce7;border-color:#86efac}
 .cake{display:flex;flex-direction:column;gap:4px;margin:6px 0}.layer{padding:8px;border-radius:6px;background:#fde68a;border:2px solid #b45309;cursor:pointer;transition:transform .2s}.layer:nth-child(2){background:#bfdbfe;border-color:#1d4ed8}.layer:nth-child(3){background:#d1d5db;border-color:#374151}.layer.on{transform:scale(1.04);box-shadow:0 0 0 3px #c0392b}
 .mail{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid #cbd5e1;padding:8px;border-radius:6px}.mailf{display:flex;gap:6px;border-bottom:1px solid #e2e8f0}.mailf input{flex:1;border:0}
+
+.htmlview{width:100%;min-height:180px;background:#fff;border:1px solid #888;margin:6px 0}.checks{list-style:none;margin:0;padding:0}.checks li{font-size:14px}.checks li.pass{color:#1b6e2a;font-weight:700}

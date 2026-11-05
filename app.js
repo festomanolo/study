@@ -85,6 +85,7 @@ function route() {
   if (p[0] === 'cs' && forms[p[1]]) {
     if (p[2] === 'toc') return toc(p[1]);
     if (p[2] === 'p') return pageScene(p[1], +p[3] || 0);
+    if (p[2] === 't') return pageScene(p[1], Math.max(0, pagesOf(p[1]).findIndex(x => x.t?.id === p[3])));
     return cover(p[1]);
   }
   if (p[0] === 'hardware') return hardware();
@@ -317,6 +318,7 @@ function lab(t0, k) {
   const t = k ? { ...t0, id: `${t0.id}.${k}` } : t0, L = k ? t0.labs[k - 2] : t0.lab, box = h('div', { class: 'lab' }, h('h4', {}, t.title));
   const types = {
     console: () => consoleLab(box, t),
+    html: () => htmlLab(box, t, L),
     sort() {
       let sel = null, left = L.items.length; const items = h('div', { class: 'items' }), cats = h('div', { class: 'cats' });
       L.cats.forEach((c, ci) => cats.append(h('div', { class: 'cat', role: 'button', tabindex: 0, onclick() { if (!sel) return; if (sel.ci === ci) { this.append(h('div', {}, sel.txt)); sel.el.remove(); sel = null; chime(700, .05); if (!--left) done(t); } else { sel.el.classList.add('bad'); chime(200, .1); setTimeout(() => sel?.el.classList.remove('bad'), 350); } } }, h('b', {}, c))));
@@ -436,3 +438,22 @@ window.__manolo = { pagesOf }; // test hook
 // ---- deep-link scene for settings via hash is not needed; start ----
 applySettings(); route();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').then(r => r.addEventListener('updatefound', () => r.installing.addEventListener('statechange', function () { if (this.state === 'installed' && navigator.serviceWorker.controller) document.body.append(h('button', { class: 'pri', style: 'position:fixed;bottom:8px;right:8px;z-index:8', onclick: () => location.reload() }, 'New lessons available — tap to refresh')); }))).catch(() => {});
+
+// ---- HTML lab: write a page, see it live, tick the checks ----
+function htmlLab(box, t, L) {
+  const ta = h('textarea', { spellcheck: false, autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', 'aria-label': 'HTML editor' }, L.code),
+    frame = h('iframe', { class: 'htmlview', title: 'Preview of your page', sandbox: '' }), list = h('ul', { class: 'checks' });
+  const ok = (re, src) => re[0] === '!' ? !new RegExp(re.slice(1), 'i').test(src) : new RegExp(re, 'i').test(src);
+  const heal = () => { if (/[“”„‘’‚\u00a0]/.test(ta.value)) { const p = ta.selectionStart; ta.value = ta.value.replace(/[“”„]/g, '"').replace(/[‘’‚]/g, "'").replace(/\u00a0/g, ' '); ta.selectionStart = ta.selectionEnd = p; } };
+  const update = () => {
+    heal(); frame.srcdoc = ta.value;
+    const res = L.checks.map(([re, label]) => [ok(re, ta.value), label]);
+    list.replaceChildren(...res.map(([pass, label]) => h('li', { class: pass ? 'pass' : '' }, (pass ? '✓ ' : '○ ') + label)));
+    if (res.every(r => r[0])) done(t, 'Well done! Your page passes every check. / Hongera!');
+  };
+  ta.addEventListener('input', update);
+  ta.onkeydown = e => { if (e.key === 'Tab') { e.preventDefault(); ta.setRangeText('  ', ta.selectionStart, ta.selectionEnd, 'end'); } };
+  const keys = h('div', { class: 'keys' }, ['<', '>', '/', '"', '=', '</p>', '<p>', '<li>', '  '].map(k => h('button', { onclick: () => { const s = ta.selectionStart; ta.setRangeText(k, s, ta.selectionEnd, 'end'); ta.focus(); update(); } }, k.trim() || '⇥')));
+  box.append(h('p', {}, h('b', {}, 'Task: '), L.task), keys, ta, h('small', {}, 'Your page updates as you type. Tick every check to finish.'), frame, list);
+  update();
+}
