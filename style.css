@@ -207,3 +207,11 @@ u.mark{text-decoration:2px underline #c0392b;text-underline-offset:3px;color:var
 @media(prefers-reduced-transparency:reduce){.sx,.sx-ov,.hud-btn{-webkit-backdrop-filter:none;backdrop-filter:none}.sx{background:#1c1c1e}.hud-btn{background:#2c2c2e!important}}
 @media(prefers-reduced-motion:reduce){.sx,.sx-ov,.sx-sw,.sx-sw::after,.sx-seg i{animation:none!important;transition:none!important}}
 .reduce .sx,.reduce .sx-ov,.reduce .sx-sw,.reduce .sx-sw::after,.reduce .sx-seg i{animation:none!important;transition:none!important}
+
+/* ---- reading mode: the dock tucks away, leaving a peek tab with the page number ---- */
+.dk-grab{height:22px}.dk-peek{position:absolute;left:0;right:0;top:15px;text-align:center;font:600 11px/1 -apple-system,system-ui,sans-serif;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.7);opacity:0;transition:opacity .3s ease .15s;pointer-events:none}
+.dock.hide{transform:translateX(-50%) translateY(calc(100% - 34px))}
+.dock.hide .dk-peek{opacity:1}.dock.hide .dk-grab{height:34px}.dock.hide .dk-grab i{top:8px}.dock.hide .dk-main,.dock.hide .dk-tools{pointer-events:none}
+.dk-more.on{background:rgba(10,132,255,.2);color:#409cff}.dk-more .ic{transition:transform .35s var(--dk-ease)}.dk-more.on .ic{transform:scale(.92)}
+.dock:not(.tools-off) .dk-tools{padding-bottom:2px}
+@media(max-width:560px){.dock.hide{transform:translateX(-50%) translateY(calc(100% - 34px))}}
