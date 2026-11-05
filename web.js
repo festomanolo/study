@@ -161,6 +161,7 @@ export const webUnit = {
         '- All pictures show, and all have `alt`.',
         '- Every page links the same `style.css`.',
         'Remember: Links between your own pages use only the file name. Keep every page in the same folder (or use `folder/file.html`).',
+        'When your site is finished, upload it to GitHub and make sure you follow https://github.com/festomanolo so your teacher can see and mark it. The steps are in the GitHub guide.',
       ],
       {},
       { type: 'html', code: '<nav>\n  <a href="index.html">Home</a> |\n  <a href="about.html">About</a>\n</nav>\n<h1>Home</h1>\n', task: 'Add two more links to the menu (subjects.html and contact.html) and a paragraph below the heading.', checks: [['href="subjects.html"', 'Links to subjects.html'], ['href="contact.html"', 'Links to contact.html'], ['<p>[^<]+</p>', 'Has a paragraph']] },
@@ -170,6 +171,7 @@ export const webUnit = {
     T('github-guide', 'HP-1(i)', 'GitHub: save and share your work', 'GitHub: kuhifadhi na kushiriki kazi yako',
       [
         '[[GitHub]] is a free website where programmers keep their projects. Your teacher will open your GitHub page to see and mark your work, so every project must be uploaded there.',
+        'Remember: FOLLOW YOUR TEACHER on GitHub. Open https://github.com/festomanolo and press Follow. If you do not follow, your teacher may not see your work and cannot mark it.',
         '## 1. Create your account',
         '- Open github.com in your browser and press Sign up.',
         '- Email: use your own email, or a parent\'s email if you do not have one. You will receive a code: type it to confirm.',
@@ -191,6 +193,7 @@ export const webUnit = {
         '- Press Commit changes. Your files are now online.',
         '## 5. Share the link',
         'Copy the address of your repository from the browser, for example `https://github.com/aminajuma/html-website`. Paste it into the answer box of the matching task in Learn Roll and press Submit.',
+        'Remember: Before you submit, check that you are following https://github.com/festomanolo and that your repository is Public. Then your teacher can open and mark your work.',
         '## 6. If something goes wrong',
         '- Forgot your password? Press "Forgot password" on the sign in page and use your email.',
         '- Cannot see your files? Check that you pressed Commit changes.',
