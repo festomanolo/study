@@ -37,6 +37,7 @@ const reduced = () => document.documentElement.classList.contains('reduce');
 const ICONS = {
   contents: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r=".6"/><circle cx="4.5" cy="12" r=".6"/><circle cx="4.5" cy="18" r=".6"/>',
   prev: '<path d="M15 5l-7 7 7 7"/>', next: '<path d="M9 5l7 7-7 7"/>',
+  apps: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
   pack: '<path d="M9 7V6a3 3 0 016 0v1"/><rect x="5" y="7" width="14" height="14" rx="4.5"/><path d="M9 15h6M9 11.5h6"/>',
   translate: '<path d="M3.5 6h9M8 4v2M5.5 6c.6 3.6 3 6.4 6 8M11.5 6c-.6 3.6-3 6.4-6.5 8.2"/><path d="M12.5 20l4-9 4 9M14 16.8h5"/>',
   flow: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
