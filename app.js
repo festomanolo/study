@@ -494,9 +494,13 @@ function settings() {
   const grab = h('div', { class: 'sx-grab' }, h('i'));
   const panel = h('div', { class: 'sx', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Settings' }, grab,
     h('header', {}, h('span', {}), h('b', {}, 'Settings'), h('button', { class: 'sx-done', onclick: done }, 'Done')),
-    row('Quality', h('select', { onchange: e => { S.set.quality = e.target.value; save(); applySettings(); } }, ['auto', 'low', 'high'].map(v => h('option', { value: v, ...(S.set.quality === v ? { selected: true } : {}) }, v)))),
-    row('Voice speed', h('input', { type: 'range', min: .5, max: 1.5, step: .1, value: S.set.rate, onchange: e => { S.set.rate = +e.target.value; save(); } })),
-    h('button', { onclick: exportProgress }, 'Export progress (teacher view)'),
+    h('div', { class: 'sx-body' },
+      group('Learning', row('Swahili layer', sw('sw'), 'Mipangilio: margin notes and error hints in Kiswahili')),
+      group('Display', row('Reduce motion', sw('reduce')), row('Readable font', sw('readable'), 'Plain system type instead of handwriting'),
+        stack('Text size', seg('fs', [[.9, 'Small'], [1, 'Medium'], [1.2, 'Large']], S.set.fs)), stack('Quality', seg('quality', [['auto', 'Auto'], ['low', 'Low'], ['high', 'High']], S.set.quality), 'Lower quality saves battery on older phones')),
+      group('Voice', stack('Speaking speed', h('div', { class: 'sx-rate' }, h('small', {}, 'Slow'), h('input', { type: 'range', min: .5, max: 1.5, step: .1, value: S.set.rate, 'aria-label': 'Speaking speed', onchange: e => { S.set.rate = +e.target.value; save(); } }), h('small', {}, 'Fast')))),
+      group('Data', action('Export progress (teacher view)', exportProgress), reset)));
+  const ov = h('div', { class: 'sx-ov', onpointerdown: e => { if (e.target === ov) done(); } }, panel);
     h('button', { onclick: () => { if (confirm('Reset all progress?')) { S = structuredClone(DEF); save(); applySettings(); dlg.remove(); route(); } } }, 'Reset progress'),
     h('button', { class: 'pri', onclick: () => dlg.remove() }, 'Close')));
   document.body.append(dlg); dlg.querySelector('input,button')?.focus();
