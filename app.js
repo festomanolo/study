@@ -238,10 +238,18 @@ function pageScene(f, n, ghost = false) {
   const inkBtn = tool('ink', INKS[S.set.ink][2], { title: 'Change pen colour', onclick: () => { S.set.ink = (S.set.ink + 1) % INKS.length; save(); applySettings(); inkBtn.lastChild.textContent = INKS[S.set.ink][2]; inkBtn.style.setProperty('--tint', INKS[S.set.ink][0]); } });
   inkBtn.style.setProperty('--tint', INKS[S.set.ink][0]);
   const light = h('input', { type: 'range', min: 0, max: 100, value: S.set.light, 'aria-label': 'Lighting', oninput: e => { S.set.light = +e.target.value; applySettings(); }, onchange: save });
-  const nav = h('nav', { class: 'pill' },
-    h('button', { onclick: () => go(`#/cs/${f}/toc`), 'aria-label': 'Contents' }, '☰'), h('button', { disabled: n === 0, onclick: () => go(`#/cs/${f}/p/${n - 1}`), 'aria-label': 'Previous page' }, '←'), h('span', { class: 'pg' }, `Page ${n + 1} / ${pgs.length}`), h('button', { disabled: n === pgs.length - 1, onclick: () => go(`#/cs/${f}/p/${n + 1}`), 'aria-label': 'Next page' }, '→'),
-    h('i', { class: 'sep' }),
-    h('button', { class: S.set.sw ? 'on' : '', onclick: () => { S.set.sw = !S.set.sw; save(); route(); }, title: 'Show Swahili explanations' }, '🇹🇿 Fafanua'),
+  const pop = h('div', { class: 'dk-pop', hidden: true, role: 'dialog', 'aria-label': 'Lighting' }, icon('light'), light, icon('light'));
+  const lightBtn = tool('light', 'Light', { 'aria-haspopup': 'dialog', 'aria-expanded': 'false', onclick: e => { e.stopPropagation(); setPop(pop.hidden); } });
+  const setPop = open => { pop.hidden = !open; lightBtn.classList.toggle('on', open); lightBtn.setAttribute('aria-expanded', open); };
+  const outside = e => { if (!pop.hidden && !pop.contains(e.target) && !lightBtn.contains(e.target)) setPop(false); }, esc = e => { if (e.key === 'Escape') setPop(false); };
+  let open = true; try { open = localStorage['manolo.dock'] !== '0'; } catch {}
+  const grab = h('button', { class: 'dk-grab', 'aria-label': 'Show or hide tools' }, h('i'));
+  const setOpen = o => { open = o; dock.classList.toggle('tools-off', !o); grab.setAttribute('aria-expanded', o); tools.inert = !o; try { localStorage['manolo.dock'] = o ? '1' : '0'; } catch {} };
+  let gy = null; grab.addEventListener('pointerdown', e => { gy = e.clientY; grab.setPointerCapture(e.pointerId); });
+  grab.addEventListener('pointerup', e => { if (gy == null) return; const dy = e.clientY - gy; gy = null; setOpen(dy < -14 ? true : dy > 14 ? false : !open); });
+  grab.addEventListener('pointercancel', () => { gy = null; });
+  const total = pgs.length;
+  const pager = h('button', { class: 'dk-pg', onclick: () => go(`#/cs/${f}/toc`), 'aria-label': `Page ${n + 1} of ${total}. Open contents` }, h('b', {}, n + 1), h('span', {}, `of ${total}`), h('i', { style: `--p:${total > 1 ? n / (total - 1) : 1}` }));
     h('button', { onclick: withDiagram('sim'), disabled: !(want && DIAGRAMS[pg.t.id].sim), title: 'Animated step-by-step simulator' }, '⚡ Data Flow'),
     h('button', { onclick: withDiagram('recall'), disabled: !want, title: 'Hide the labels and put them back' }, '🧩 Active Recall'),
     voice, copyBtn, h('i', { class: 'sep' }), edit, inkBtn, h('label', { class: 'lt' }, 'Light', light),
