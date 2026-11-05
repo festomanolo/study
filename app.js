@@ -48,6 +48,7 @@ function ttsSpeak(t, { rate = S.set.rate, onEnd, onError } = {}) {
     if ('speechSynthesis' in window) { try { const m = new SpeechSynthesisUtterance(c); m.rate = rate || 1; if (onEnd) m.onend = onEnd; if (onError) m.onerror = onError; speechSynthesis.speak(m); return; } catch {} }
     onError ? onError() : say('Speech is not available on this device.');
   };
+  if (!NEURAL) return a.onerror();
   a.play().catch(() => a.onerror?.());
 }
 
