@@ -230,8 +230,8 @@ function pageScene(f, n, ghost = false) {
     if (sheet.classList.contains('copymode')) return copyOff();
     sheet.classList.add('copymode'); copyBtn.classList.add('on'); pencil.hidden = true;
     const lh = parseFloat(getComputedStyle(sheet).lineHeight) || 28, lines = Math.round(sheet.scrollHeight / lh);
-    say(`Copy mode: about ${(lines / 32).toFixed(1)} Counter Book pages. Screen stays on.`); copyBtn.textContent = `✍ ≈ ${(lines / 32).toFixed(1)} pages`;
-    try { wl = await navigator.wakeLock?.request('screen'); } catch {} } }, '✍ Nakili Daftarini');
+    say(`Copy mode: about ${(lines / 32).toFixed(1)} Counter Book pages. Screen stays on.`); copyBtn.querySelector('.lbl').textContent = `≈ ${(lines / 32).toFixed(1)} pg`;
+    try { wl = await navigator.wakeLock?.request('screen'); } catch {} } });
   const editable = type => type.startsWith('notes'), blocksOf = () => [...sheet.querySelectorAll(':scope > p:not([contenteditable]), :scope > ul > li')];
   const saved = S.edits[pg.id]; if (saved) blocksOf().forEach((b, k) => { if (saved[k] != null) b.textContent = saved[k]; });
   let editing = false; const edit = h('button', { onclick: () => { editing = !editing; sheet.classList.toggle('editing', editing); edit.classList.toggle('on', editing); blocksOf().forEach((b, k) => { b.contentEditable = editing; b.oninput = () => { (S.edits[pg.id] ||= {})[k] = b.textContent; save(); }; }); say(editing ? 'Edit mode on: tap any line and type.' : 'Edit mode off.'); }, disabled: !editable(pg.type || '') }, h('i', { class: 'dot' }), 'Edit');
